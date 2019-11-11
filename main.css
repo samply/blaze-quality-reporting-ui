@@ -1,0 +1,8 @@
+body {
+  margin: 0;
+}
+
+.load-or-create-panel {
+  display: flex;
+  justify-content: center;
+}
