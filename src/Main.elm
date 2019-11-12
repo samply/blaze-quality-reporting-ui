@@ -1,116 +1,178 @@
 module Main exposing (Msg(..), main, update, view)
 
-import Browser
-import Fhir.Bundle exposing (Bundle)
-import Fhir.Http as FhirHttp
-import Fhir.Library exposing (Library)
-import Html exposing (..)
-import Html.Attributes exposing (..)
-import Http
-import Json.Encode as Encode
-import Library.Panel as LibraryPanel
-import Material.Button exposing (buttonConfig, raisedButton)
-import Material.LayoutGrid
-    exposing
-        ( layoutGrid
-        , layoutGridCell
-        , layoutGridInner
-        , span12
-        )
-import Material.TextField exposing (textField, textFieldConfig)
-import Material.TopAppBar as TopAppBar exposing (topAppBar, topAppBarConfig)
-import Material.Typography as Typography
-import Measure.Panel as MeasurePanel
+import Browser exposing (Document)
+import Browser.Navigation as Nav
+import Json.Encode exposing (Value)
+import Page
+import Page.Blank as Blank
+import Page.Measure as Measure
+import Page.Measure.List as MeasureList
+import Page.NotFound as NotFound
+import Route exposing (Route)
+import Session exposing (Session)
+import Url exposing (Url)
 
 
-main =
-    Browser.element
-        { init = init
-        , update = update
-        , subscriptions = subscriptions
-        , view = view
-        }
+
+-- Model
 
 
 type alias Model =
-    { baseUrl : String
-    , libraryPanel : LibraryPanel.Model Msg
-    , measurePanel : MeasurePanel.Model
-    }
+    { drawerOpen : Bool, page : Page }
 
 
-init : () -> ( Model, Cmd Msg )
-init _ =
-    let
-        base =
-            --"https://blaze.life.uni-leipzig.de/fhir"
-            --"http://hapi.fhir.org/baseR4"
-            "http://localhost:8000/fhir"
-    in
-    ( { baseUrl = base
-      , libraryPanel = LibraryPanel.init base LibraryPanelMsg LibraryChanged
-      , measurePanel = MeasurePanel.init base Nothing
-      }
-    , Cmd.none
-    )
+type Page
+    = Redirect Session
+    | NotFound Session
+    | MeasureList MeasureList.Model
+    | Measure Measure.Model
+
+
+init : Value -> Url -> Nav.Key -> ( Model, Cmd Msg )
+init _ url navKey =
+    changeRouteTo (Route.fromUrl url)
+        { drawerOpen = False
+        , page =
+            Redirect
+                { navKey = navKey
+                , base =
+                    --     "http://localhost:8000/fhir"
+                    "https://blaze.life.uni-leipzig.de/fhir"
+                }
+        }
+
+
+
+-- UPDATE
 
 
 type Msg
-    = ChangeBaseUrl String
-    | LibraryPanelMsg LibraryPanel.Msg
-    | MeasurePanelMsg MeasurePanel.Msg
-    | Execute
-    | BundleResult (Result Http.Error Bundle)
-    | LibraryChanged Library
+    = ChangedUrl Url
+    | ClickedLink Browser.UrlRequest
+    | ClickedNavIcon
+    | ClickedNavItem Page.NavItem
+    | ClosedDrawer
+    | GotMeasureListMsg MeasureList.Msg
+    | GotMeasureMsg Measure.Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    case msg of
-        ChangeBaseUrl baseUrl ->
-            ( { model
-                | baseUrl = baseUrl
-                , libraryPanel = LibraryPanel.init baseUrl LibraryPanelMsg LibraryChanged
-              }
-            , Cmd.none
+    case ( msg, model.page ) of
+        ( ChangedUrl url, _ ) ->
+            changeRouteTo (Route.fromUrl url) model
+
+        ( ClickedLink urlRequest, _ ) ->
+            case urlRequest of
+                Browser.Internal url ->
+                    case url.fragment of
+                        Nothing ->
+                            -- If we got a link that didn't include a fragment,
+                            -- it's from one of those (href "") attributes that
+                            -- we have to include to make the RealWorld CSS work.
+                            --
+                            -- In an application doing path routing instead of
+                            -- fragment-based routing, this entire
+                            -- `case url.fragment of` expression this comment
+                            -- is inside would be unnecessary.
+                            ( model, Cmd.none )
+
+                        Just _ ->
+                            ( model
+                            , Nav.pushUrl
+                                (Session.navKey (toSession model.page))
+                                (Url.toString url)
+                            )
+
+                Browser.External href ->
+                    ( model
+                    , Nav.load href
+                    )
+
+        ( ClickedNavIcon, _ ) ->
+            ( { model | drawerOpen = True }, Cmd.none )
+
+        ( ClickedNavItem navItem, _ ) ->
+            ( { model | drawerOpen = False }
+            , Route.pushUrl (Session.navKey (toSession model.page)) (toRoute navItem)
             )
 
-        LibraryPanelMsg msg_ ->
-            let
-                ( library, cmd ) =
-                    LibraryPanel.update msg_ model.libraryPanel
-            in
-            ( { model | libraryPanel = library }
-            , cmd
-            )
+        ( ClosedDrawer, _ ) ->
+            ( { model | drawerOpen = False }, Cmd.none )
 
-        MeasurePanelMsg msg_ ->
-            let
-                ( measure, cmd ) =
-                    MeasurePanel.update msg_ model.measurePanel
-            in
-            ( { model | measurePanel = measure }
-            , Cmd.map MeasurePanelMsg cmd
-            )
+        ( GotMeasureListMsg subMsg, MeasureList measureList ) ->
+            MeasureList.update subMsg measureList
+                |> updateWith MeasureList GotMeasureListMsg model
 
-        Execute ->
-            ( model
-            , FhirHttp.postBundle BundleResult model.baseUrl Encode.null
-            )
+        ( GotMeasureMsg subMsg, Measure measure ) ->
+            Measure.update subMsg measure
+                |> updateWith Measure GotMeasureMsg model
 
-        BundleResult (Ok bundle) ->
-            Debug.log (Debug.toString bundle) ( model, Cmd.none )
+        ( _, _ ) ->
+            -- Disregard messages that arrived for the wrong page.
+            ( model, Cmd.none )
 
-        BundleResult (Err error) ->
-            Debug.log (Debug.toString error) ( model, Cmd.none )
 
-        LibraryChanged library ->
-            ( { model
-                | measurePanel =
-                    MeasurePanel.updateLibraryUrl library.url model.measurePanel
-              }
-            , Cmd.none
-            )
+toSession : Page -> Session
+toSession page =
+    case page of
+        Redirect session ->
+            session
+
+        NotFound session ->
+            session
+
+        MeasureList measureList ->
+            MeasureList.toSession measureList
+
+        Measure measure ->
+            Measure.toSession measure
+
+
+changeRouteTo : Maybe Route -> Model -> ( Model, Cmd Msg )
+changeRouteTo maybeRoute model =
+    let
+        session =
+            toSession model.page
+    in
+    case maybeRoute of
+        Nothing ->
+            ( { model | page = NotFound session }, Cmd.none )
+
+        Just Route.MeasureList ->
+            MeasureList.init session
+                |> updateWith MeasureList GotMeasureListMsg model
+
+        Just (Route.Measure id) ->
+            Measure.init session id
+                |> updateWith Measure GotMeasureMsg model
+
+        Just (Route.LibraryByUrl uri) ->
+            Measure.init session uri
+                |> updateWith Measure GotMeasureMsg model
+
+
+toRoute : Page.NavItem -> Route
+toRoute navItem =
+    case navItem of
+        Page.Measures ->
+            Route.MeasureList
+
+
+updateWith :
+    (subModel -> Page)
+    -> (subMsg -> Msg)
+    -> Model
+    -> ( subModel, Cmd subMsg )
+    -> ( Model, Cmd Msg )
+updateWith toModel toMsg model ( subModel, subCmd ) =
+    ( { model | page = toModel subModel }
+    , Cmd.map toMsg subCmd
+    )
+
+
+
+-- SUBSCRIPTIONS
 
 
 subscriptions : Model -> Sub Msg
@@ -122,56 +184,61 @@ subscriptions _ =
 -- VIEW
 
 
-view : Model -> Html Msg
+view : Model -> Document Msg
 view model =
-    div [ Typography.typography ]
-        [ appBar
-        , content model
-        ]
-
-
-appBar =
-    topAppBar { topAppBarConfig | fixed = True }
-        [ TopAppBar.row []
-            [ TopAppBar.section [ TopAppBar.alignStart ]
-                [ Html.span [ TopAppBar.title ]
-                    [ text "Blaze CDS" ]
-                ]
-            ]
-        ]
-
-
-baseUrlInput baseUrl =
-    div [ style "display" "flex" ]
-        [ textField
-            { textFieldConfig
-                | additionalAttributes = [ style "flex-grow" "1" ]
-                , label = Just "Base URL"
-                , value = Just baseUrl
-                , onInput = Just ChangeBaseUrl
+    let
+        pageViewConfig =
+            { onDrawerClose = ClosedDrawer
+            , onNavIconClick = ClickedNavIcon
+            , onNavItemClick = ClickedNavItem
             }
-        ]
+
+        viewPage toMsg config =
+            let
+                { title, body } =
+                    Page.view
+                        toMsg
+                        pageViewConfig
+                        model.drawerOpen
+                        config
+            in
+            { title = title
+            , body = body
+            }
+    in
+    case model.page of
+        Redirect _ ->
+            Page.view
+                identity
+                pageViewConfig
+                model.drawerOpen
+                Blank.view
+
+        NotFound _ ->
+            Page.view
+                identity
+                pageViewConfig
+                model.drawerOpen
+                NotFound.view
+
+        MeasureList measureList ->
+            viewPage GotMeasureListMsg (MeasureList.view measureList)
+
+        Measure measure ->
+            viewPage GotMeasureMsg (Measure.view measure)
 
 
-content : Model -> Html Msg
-content { baseUrl, libraryPanel, measurePanel } =
-    div [ class "mdc-top-app-bar--fixed-adjust" ]
-        [ layoutGrid []
-            [ layoutGridInner []
-                [ layoutGridCell [ span12 ] [ baseUrlInput baseUrl ]
-                , layoutGridCell [ span12 ]
-                    [ LibraryPanel.view libraryPanel |> Html.map LibraryPanelMsg
-                    ]
-                , layoutGridCell [ span12 ]
-                    [ MeasurePanel.view measurePanel |> Html.map MeasurePanelMsg ]
-                , layoutGridCell [ span12 ]
-                    [ raisedButton
-                        { buttonConfig
-                            | onClick = Just Execute
-                            , disabled = True
-                        }
-                        "Execute"
-                    ]
-                ]
-            ]
-        ]
+
+-- MAIN
+
+
+main : Program Value Model Msg
+main =
+    Browser.application
+        { init = init
+        , onUrlChange = ChangedUrl
+        , onUrlRequest = ClickedLink
+        , subscriptions = subscriptions
+        , update = update
+        , view = view
+        }

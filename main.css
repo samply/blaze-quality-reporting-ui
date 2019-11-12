@@ -1,3 +1,7 @@
+:root {
+  --mdc-theme-primary: #84b5f1;
+}
+
 body {
   margin: 0;
 }
@@ -5,4 +9,55 @@ body {
 .load-or-create-panel {
   display: flex;
   justify-content: center;
+}
+
+.drawer {
+  background-color: #4a5566;
+}
+
+.drawer.mdc-drawer .mdc-drawer__title {
+  color: #dce3f5;
+}
+
+.drawer.mdc-drawer .mdc-drawer__subtitle {
+  color: #dce3f5;
+}
+
+.drawer.mdc-drawer .mdc-list-item {
+  color: #dce3f5;
+}
+
+.drawer.mdc-drawer .mdc-list-item__graphic {
+  color: #dce3f5;
+}
+
+.drawer.mdc-drawer .mdc-list-divider {
+  border-bottom-color: #2f3648;
+}
+
+.content {
+  background-color: #edf2f6;
+  flex-grow: 1;
+}
+
+.main-content {
+}
+
+.measure-group-card__header {
+  padding: 1rem;
+}
+
+.measure-group-card__title {
+  margin: 0;
+}
+
+.mdc-dialog .mdc-dialog__content {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.mdc-dialog .mdc-dialog__content .mdc-select,
+.mdc-dialog .mdc-dialog__content .mdc-text-field:not(:last-child) {
+  margin-bottom: 1rem;
 }

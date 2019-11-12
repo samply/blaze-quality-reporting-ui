@@ -1,10 +1,25 @@
 module Fhir.Http exposing (..)
 
 import Fhir.Bundle as Bundle exposing (Bundle)
+import Fhir.PrimitiveTypes exposing (Id)
 import Http
 import Json.Decode exposing (Decoder)
 import Json.Encode exposing (Value)
 import Url.Builder as UrlBuilder exposing (QueryParameter)
+
+
+read :
+    (Result Http.Error resource -> msg)
+    -> String
+    -> String
+    -> Id
+    -> Decoder resource
+    -> Cmd msg
+read toMsg base type_ id decoder =
+    Http.get
+        { url = UrlBuilder.crossOrigin base [ type_, id ] []
+        , expect = Http.expectJson toMsg decoder
+        }
 
 
 searchType :
