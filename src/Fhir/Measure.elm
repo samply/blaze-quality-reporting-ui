@@ -12,6 +12,7 @@ module Fhir.Measure exposing
 
 import Fhir.CodeableConcept as CodeableConcept exposing (CodeableConcept)
 import Fhir.Coding exposing (Coding)
+import Fhir.Encode exposing (object, optionalListPair, optionalPair, pair)
 import Fhir.Expression as Expression exposing (Expression)
 import Fhir.PrimitiveTypes exposing (Canonical, Id, Uri)
 import Json.Decode exposing (Decoder, list, maybe, string, succeed)
@@ -68,6 +69,7 @@ new libraryUrl =
                   , code = Just "Patient"
                   }
                 ]
+            , text = Nothing
             }
     , library = MaybeExtra.toList libraryUrl
     , scoring = Nothing
@@ -107,38 +109,45 @@ measurePopulationType code =
 
 encode : Measure -> Value
 encode { id, name, title, subtitle, subject, library, scoring, group } =
-    Encode.object <|
-        ( "resourceType", Encode.string "Measure" )
-            :: List.filterMap identity
-                [ Maybe.map (\s -> ( "id", Encode.string s )) id
-                , Maybe.map (\s -> ( "name", Encode.string s )) name
-                , Maybe.map (\s -> ( "title", Encode.string s )) title
-                , Maybe.map (\s -> ( "subtitle", Encode.string s )) subtitle
-                , Maybe.map (\s -> ( "subjectCodeableConcept", CodeableConcept.encode s )) subject
-                , Just ( "library", Encode.list Encode.string library )
-                , Maybe.map (\s -> ( "scoring", CodeableConcept.encode s )) scoring
-                , Just ( "group", Encode.list encodeGroup group )
-                ]
+    object
+        [ pair "resourceType" Encode.string "Measure"
+        , optionalPair "id" Encode.string id
+        , optionalPair "name" Encode.string name
+        , optionalPair "title" Encode.string title
+        , optionalPair "subtitle" Encode.string subtitle
+        , optionalPair "subjectCodeableConcept" CodeableConcept.encode subject
+        , optionalListPair "library" Encode.string library
+        , optionalPair "scoring" CodeableConcept.encode scoring
+        , optionalListPair "group" encodeGroup group
+        ]
 
 
 encodeGroup : Group -> Value
-encodeGroup { code, description, population } =
-    Encode.object <|
-        List.filterMap identity
-            [ Maybe.map (\s -> ( "code", CodeableConcept.encode s )) code
-            , Maybe.map (\s -> ( "description", Encode.string s )) description
-            , Just ( "population", Encode.list encodePopulation population )
-            ]
+encodeGroup { code, description, population, stratifier } =
+    object
+        [ optionalPair "code" CodeableConcept.encode code
+        , optionalPair "description" Encode.string description
+        , optionalListPair "population" encodePopulation population
+        , optionalListPair "stratifier" encodeStratifier stratifier
+        ]
 
 
 encodePopulation : Population -> Value
 encodePopulation { code, description, criteria } =
-    Encode.object <|
-        List.filterMap identity
-            [ Maybe.map (\s -> ( "code", CodeableConcept.encode s )) code
-            , Maybe.map (\s -> ( "description", Encode.string s )) description
-            , Just ( "criteria", Expression.encode criteria )
-            ]
+    object
+        [ optionalPair "code" CodeableConcept.encode code
+        , optionalPair "description" Encode.string description
+        , pair "criteria" Expression.encode criteria
+        ]
+
+
+encodeStratifier : Stratifier -> Value
+encodeStratifier { code, description, criteria } =
+    object
+        [ optionalPair "code" CodeableConcept.encode code
+        , optionalPair "description" Encode.string description
+        , optionalPair "criteria" Expression.encode criteria
+        ]
 
 
 decoder : Decoder Measure

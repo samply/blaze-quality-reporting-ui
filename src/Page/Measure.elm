@@ -7,12 +7,12 @@ import Fhir.PrimitiveTypes exposing (Canonical, Id)
 import Html exposing (..)
 import Html.Attributes exposing (class)
 import Http
+import List.Extra exposing (getAt, updateAt)
 import Material.Button exposing (buttonConfig)
 import Material.Card
     exposing
         ( card
         , cardActionButton
-        , cardActionIcon
         , cardActions
         , cardBlock
         , cardConfig
@@ -38,6 +38,7 @@ import Material.List
         , listItemText
         )
 import Page.Measure.PopulationDialog as PopulationDialog
+import Page.Measure.StratifierDialog as StratifierDialog
 import Route exposing (href)
 import Session exposing (Session)
 
@@ -49,6 +50,7 @@ import Session exposing (Session)
 type alias Model =
     { session : Session
     , populationDialog : PopulationDialog.Model Msg
+    , stratifierDialog : StratifierDialog.Model Msg
     , measureId : Id
     , measure : Status Measure
     }
@@ -66,6 +68,8 @@ init session id =
     ( { session = session
       , populationDialog =
             PopulationDialog.init session.base PopulationDialogMsg SavedMeasure
+      , stratifierDialog =
+            StratifierDialog.init session.base StratifierDialogMsg SavedMeasure
       , measureId = id
       , measure = Loading
       }
@@ -84,9 +88,11 @@ toSession model =
 
 type Msg
     = ClickedPopulation Int Int
+    | ClickedAddStratifier Int
     | SavedMeasure Measure
     | CompletedLoadMeasure (Result Http.Error Measure)
     | PopulationDialogMsg PopulationDialog.Msg
+    | StratifierDialogMsg StratifierDialog.Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -100,6 +106,28 @@ update msg model =
                             measure
                             groupIdx
                             populationIdx
+                        )
+                        model
+
+                _ ->
+                    model
+            , Cmd.none
+            )
+
+        ClickedAddStratifier groupIdx ->
+            ( case model.measure of
+                Loaded measure ->
+                    updateStratifierDialog
+                        (StratifierDialog.doOpen model.measureId
+                            (addNewStratifier groupIdx measure)
+                            groupIdx
+                            (Debug.log "idx"
+                                (getAt groupIdx measure.group
+                                    |> Maybe.map .stratifier
+                                    |> Maybe.map List.length
+                                    |> Maybe.withDefault 0
+                                )
+                            )
                         )
                         model
 
@@ -128,9 +156,39 @@ update msg model =
             in
             ( { model | populationDialog = populationDialog }, cmd )
 
+        StratifierDialogMsg msg_ ->
+            let
+                ( stratifierDialog, cmd ) =
+                    StratifierDialog.update msg_ model.stratifierDialog
+            in
+            ( { model | stratifierDialog = stratifierDialog }, cmd )
+
+
+addNewStratifier : Int -> Measure -> Measure
+addNewStratifier groupIdx =
+    updateGroup
+        (addStratifier
+            { code = Nothing, description = Nothing, criteria = Nothing }
+        )
+        groupIdx
+
+
+addStratifier : Measure.Stratifier -> Measure.Group -> Measure.Group
+addStratifier stratifier group =
+    { group | stratifier = group.stratifier ++ [ stratifier ] }
+
+
+updateGroup : (Measure.Group -> Measure.Group) -> Int -> Measure -> Measure
+updateGroup f groupIdx measure =
+    { measure | group = updateAt groupIdx f measure.group }
+
 
 updatePopulationDialog f model =
     { model | populationDialog = f model.populationDialog }
+
+
+updateStratifierDialog f model =
+    { model | stratifierDialog = f model.stratifierDialog }
 
 
 loadMeasure base id =
@@ -149,23 +207,36 @@ view model =
             , content =
                 div []
                     [ viewPopulationDialog model.populationDialog
+                    , viewStratifierDialog model.stratifierDialog
                     , viewMeasure measure
                     ]
             }
 
         Loading ->
             { title = [ "Measure" ]
-            , content = div [] [ viewPopulationDialog model.populationDialog ]
+            , content =
+                div []
+                    [ viewPopulationDialog model.populationDialog
+                    , viewStratifierDialog model.stratifierDialog
+                    ]
             }
 
         LoadingSlowly ->
             { title = [ "Measure" ]
-            , content = div [] [ viewPopulationDialog model.populationDialog ]
+            , content =
+                div []
+                    [ viewPopulationDialog model.populationDialog
+                    , viewStratifierDialog model.stratifierDialog
+                    ]
             }
 
         Failed ->
             { title = [ "Measure" ]
-            , content = div [] [ viewPopulationDialog model.populationDialog ]
+            , content =
+                div []
+                    [ viewPopulationDialog model.populationDialog
+                    , viewStratifierDialog model.stratifierDialog
+                    ]
             }
 
 
@@ -178,6 +249,11 @@ measureTitle { title, name, id } =
 viewPopulationDialog : PopulationDialog.Model Msg -> Html Msg
 viewPopulationDialog model =
     PopulationDialog.view model |> Html.map PopulationDialogMsg
+
+
+viewStratifierDialog : StratifierDialog.Model Msg -> Html Msg
+viewStratifierDialog model =
+    StratifierDialog.view model |> Html.map StratifierDialogMsg
 
 
 viewMeasure : Measure -> Html Msg
@@ -263,7 +339,10 @@ viewGroup idx { code, description, population, stratifier } =
                     { buttons =
                         [ cardActionButton buttonConfig
                             "Add Population"
-                        , cardActionButton buttonConfig
+                        , cardActionButton
+                            { buttonConfig
+                                | onClick = Just (ClickedAddStratifier idx)
+                            }
                             "Add Stratifier"
                         ]
                     , icons = []

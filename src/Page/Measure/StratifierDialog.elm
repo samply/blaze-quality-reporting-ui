@@ -1,4 +1,4 @@
-module Page.Measure.PopulationDialog exposing
+module Page.Measure.StratifierDialog exposing
     ( Model
     , Msg
     , doClose
@@ -11,21 +11,14 @@ module Page.Measure.PopulationDialog exposing
 import Fhir.CodeableConcept exposing (CodeableConcept)
 import Fhir.Expression exposing (Expression)
 import Fhir.Http as FhirHttp
-import Fhir.Measure as Measure exposing (Measure, measurePopulationType)
+import Fhir.Measure as Measure exposing (Measure)
 import Fhir.PrimitiveTypes exposing (Id)
-import Html exposing (Html, text)
+import Html exposing (Html)
 import Html.Attributes exposing (class)
 import Http as Http
 import List.Extra exposing (getAt, updateAt)
 import Material.Button exposing (buttonConfig, textButton)
 import Material.Dialog exposing (dialog, dialogConfig)
-import Material.Select
-    exposing
-        ( filledSelect
-        , selectConfig
-        , selectOption
-        , selectOptionConfig
-        )
 import Material.TextArea exposing (textArea, textAreaConfig)
 import Material.TextField exposing (textField, textFieldConfig)
 import Task
@@ -44,7 +37,7 @@ type Model msg
         , measureId : Id
         , measure : Measure
         , groupIdx : Int
-        , populationIdx : Int
+        , stratifierIdx : Int
         }
 
 
@@ -58,7 +51,7 @@ init base onMsg onSave =
 
 type Msg
     = Close
-    | SelectedCode String
+    | EnteredCode String
     | EnteredDescription String
     | EnteredCriteria String
     | ClickedSave
@@ -66,7 +59,7 @@ type Msg
 
 
 doOpen : Id -> Measure -> Int -> Int -> Model msg -> Model msg
-doOpen measureId measure groupIdx populationIdx model =
+doOpen measureId measure groupIdx stratifierIdx model =
     case model of
         Closed { base, onMsg, onSave } ->
             Open
@@ -74,9 +67,9 @@ doOpen measureId measure groupIdx populationIdx model =
                 , onMsg = onMsg
                 , onSave = onSave
                 , measureId = measureId
-                , measure = measure
+                , measure = Debug.log "measure" measure
                 , groupIdx = groupIdx
-                , populationIdx = populationIdx
+                , stratifierIdx = stratifierIdx
                 }
 
         Open { base, onMsg, onSave } ->
@@ -87,7 +80,7 @@ doOpen measureId measure groupIdx populationIdx model =
                 , measureId = measureId
                 , measure = measure
                 , groupIdx = groupIdx
-                , populationIdx = populationIdx
+                , stratifierIdx = stratifierIdx
                 }
 
 
@@ -120,7 +113,7 @@ update msg model =
         Close ->
             ( doClose model, Cmd.none )
 
-        SelectedCode code ->
+        EnteredCode code ->
             ( setCode code model, Cmd.none )
 
         EnteredDescription description ->
@@ -145,14 +138,10 @@ setCode : String -> Model msg -> Model msg
 setCode s model =
     updateMeasure
         (updateGroup
-            (updatePopulation
-                (\population ->
-                    { population
-                        | code =
-                            Just
-                                { coding = [ measurePopulationType s ]
-                                , text = Nothing
-                                }
+            (updateStratifier
+                (\stratifier ->
+                    { stratifier
+                        | code = Just { coding = [], text = Just s }
                     }
                 )
             )
@@ -164,8 +153,8 @@ setDescription : String -> Model msg -> Model msg
 setDescription s model =
     updateMeasure
         (updateGroup
-            (updatePopulation
-                (\population -> { population | description = Just s })
+            (updateStratifier
+                (\stratifier -> { stratifier | description = Just s })
             )
         )
         model
@@ -175,7 +164,7 @@ setCriteria : String -> Model msg -> Model msg
 setCriteria s model =
     updateMeasure
         (updateGroup
-            (updatePopulation
+            (updateStratifier
                 (updateCriteria
                     (\criteria -> { criteria | expression = Just s })
                 )
@@ -184,23 +173,23 @@ setCriteria s model =
         model
 
 
-updateCriteria f population =
-    { population | criteria = f population.criteria }
+updateCriteria f stratifier =
+    { stratifier | criteria = Maybe.map f stratifier.criteria }
 
 
-updatePopulation f groupIdx group =
-    { group | population = updateAt groupIdx f group.population }
+updateStratifier f groupIdx group =
+    { group | stratifier = updateAt groupIdx f group.stratifier }
 
 
-updateGroup f groupIdx populationIdx measure =
-    { measure | group = updateAt groupIdx (f populationIdx) measure.group }
+updateGroup f groupIdx stratifierIdx measure =
+    { measure | group = updateAt groupIdx (f stratifierIdx) measure.group }
 
 
 updateMeasure : (Int -> Int -> Measure -> Measure) -> Model msg -> Model msg
 updateMeasure f model =
     case model of
-        Open ({ measure, groupIdx, populationIdx } as model_) ->
-            Open { model_ | measure = f groupIdx populationIdx measure }
+        Open ({ measure, groupIdx, stratifierIdx } as model_) ->
+            Open { model_ | measure = f groupIdx stratifierIdx measure }
 
         Closed _ ->
             model
@@ -214,7 +203,7 @@ saveMeasure model =
                 "Measure"
                 measureId
                 Measure.decoder
-                (Measure.encode measure)
+                (Measure.encode (Debug.log "measure" measure))
 
         Closed _ ->
             Cmd.none
@@ -227,13 +216,13 @@ saveMeasure model =
 view : Model msg -> Html Msg
 view model =
     let
-        population =
+        stratifier =
             case model of
-                Open { measure, groupIdx, populationIdx } ->
+                Open { measure, groupIdx, stratifierIdx } ->
                     measure.group
                         |> getAt groupIdx
-                        |> Maybe.map .population
-                        |> Maybe.andThen (getAt populationIdx)
+                        |> Maybe.map .stratifier
+                        |> Maybe.andThen (getAt stratifierIdx)
 
                 Closed _ ->
                     Nothing
@@ -242,18 +231,19 @@ view model =
         { dialogConfig
             | open = isOpen model
             , onClose = Just Close
-            , additionalAttributes = [ class "measure-population-dialog" ]
+            , additionalAttributes = [ class "measure-stratifier-dialog" ]
         }
-        { title = Just "Population"
+        { title = Just "Stratifier"
         , content =
-            [ population
+            [ stratifier
                 |> Maybe.andThen .code
-                |> codeSelector
-            , population
+                |> Maybe.andThen .text
+                |> codeField
+            , stratifier
                 |> Maybe.andThen .description
                 |> descriptionField
-            , population
-                |> Maybe.map .criteria
+            , stratifier
+                |> Maybe.andThen .criteria
                 |> Maybe.andThen .expression
                 |> criteriaField
             ]
@@ -281,36 +271,13 @@ isOpen model =
             False
 
 
-codeSelector : Maybe CodeableConcept -> Html Msg
-codeSelector code =
-    filledSelect
-        { selectConfig
-            | label = "Type"
-            , value =
-                code
-                    |> Maybe.map .coding
-                    |> Maybe.andThen List.head
-                    |> Maybe.andThen .code
-            , onChange = Just SelectedCode
+codeField code =
+    textField
+        { textFieldConfig
+            | label = Just "Type"
+            , value = code
+            , onInput = Just EnteredCode
         }
-        (List.map option
-            [ "initial-population"
-            , "numerator"
-            , "numerator-exclusion"
-            , "denominator"
-            , "denominator-exclusion"
-            , "denominator-exception"
-            , "measure-population"
-            , "measure-population-exclusion"
-            , "measure-observation"
-            ]
-        )
-
-
-option code =
-    selectOption
-        { selectOptionConfig | value = code }
-        [ text code ]
 
 
 descriptionField description =

@@ -48,7 +48,7 @@ view :
     -> Document msg
 view toPageMsg config drawerOpen { title, content } =
     { title =
-        "Blaze CDS"
+        "Blaze QR"
             :: title
             |> List.reverse
             |> String.join " - "
@@ -59,7 +59,7 @@ view toPageMsg config drawerOpen { title, content } =
             , style "align-items" "stretch"
             , style "height" "100vh"
             ]
-            [ drawer config drawerOpen
+            [ drawer config
             , div [ class "content" ]
                 [ appBar config.onNavIconClick title
                 , div [ class "main-content mdc-top-app-bar--fixed-adjust" ]
@@ -70,13 +70,13 @@ view toPageMsg config drawerOpen { title, content } =
     }
 
 
-drawer config drawerOpen =
+drawer config =
     permanentDrawer
         { permanentDrawerConfig | additionalAttributes = [ class "drawer" ] }
         [ drawerHeader []
-            [ h3 [ drawerTitle ] [ text "Blaze CDS" ]
+            [ h3 [ drawerTitle ] [ text "Blaze QR" ]
             , h6 [ drawerSubtitle ]
-                [ text "Clinical Decision Support" ]
+                [ text "Quality Reporting" ]
             ]
         , drawerContent [ class "drawer__content" ]
             [ list listConfig
