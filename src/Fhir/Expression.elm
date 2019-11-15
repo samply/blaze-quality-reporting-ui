@@ -1,4 +1,4 @@
-module Fhir.Expression exposing (Expression, decoder, encode)
+module Fhir.Expression exposing (Expression, cql, decoder, encode)
 
 import Fhir.PrimitiveTypes exposing (Code, Uri)
 import Json.Decode exposing (Decoder, maybe, string, succeed)
@@ -9,6 +9,13 @@ import Json.Encode as Encode exposing (Value)
 type alias Expression =
     { language : Code
     , expression : Maybe String
+    }
+
+
+cql : Expression
+cql =
+    { language = "text/cql"
+    , expression = Nothing
     }
 
 

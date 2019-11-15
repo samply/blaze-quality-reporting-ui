@@ -6,15 +6,16 @@ module Fhir.Measure exposing
     , decoder
     , encode
     , measurePopulationType
-    , measureScoring
     , new
+    , newStratifier
+    , scoring
     )
 
 import Fhir.CodeableConcept as CodeableConcept exposing (CodeableConcept)
 import Fhir.Coding exposing (Coding)
 import Fhir.Encode exposing (object, optionalListPair, optionalPair, pair)
 import Fhir.Expression as Expression exposing (Expression)
-import Fhir.PrimitiveTypes exposing (Canonical, Id, Uri)
+import Fhir.PrimitiveTypes exposing (Canonical, Id, Markdown, Uri)
 import Json.Decode exposing (Decoder, list, maybe, string, succeed)
 import Json.Decode.Pipeline exposing (optional, required)
 import Json.Encode as Encode exposing (Value)
@@ -27,6 +28,7 @@ type alias Measure =
     , title : Maybe String
     , subtitle : Maybe String
     , subject : Maybe CodeableConcept
+    , description : Maybe Markdown
     , library : List Canonical
     , scoring : Maybe CodeableConcept
     , group : List Group
@@ -71,6 +73,7 @@ new libraryUrl =
                 ]
             , text = Nothing
             }
+    , description = Nothing
     , library = MaybeExtra.toList libraryUrl
     , scoring = Nothing
     , group =
@@ -79,10 +82,7 @@ new libraryUrl =
           , population =
                 [ { code = Nothing
                   , description = Nothing
-                  , criteria =
-                        { language = "text/cql"
-                        , expression = Just "InInitialPopulation"
-                        }
+                  , criteria = Expression.cql
                   }
                 ]
           , stratifier = []
@@ -91,8 +91,8 @@ new libraryUrl =
     }
 
 
-measureScoring : String -> Coding
-measureScoring code =
+scoring : String -> Coding
+scoring code =
     { system = Just "http://terminology.hl7.org/CodeSystem/measure-scoring"
     , version = Nothing
     , code = Just code
@@ -107,18 +107,26 @@ measurePopulationType code =
     }
 
 
+newStratifier =
+    { code = Nothing
+    , description = Nothing
+    , criteria = Just Expression.cql
+    }
+
+
 encode : Measure -> Value
-encode { id, name, title, subtitle, subject, library, scoring, group } =
+encode measure =
     object
         [ pair "resourceType" Encode.string "Measure"
-        , optionalPair "id" Encode.string id
-        , optionalPair "name" Encode.string name
-        , optionalPair "title" Encode.string title
-        , optionalPair "subtitle" Encode.string subtitle
-        , optionalPair "subjectCodeableConcept" CodeableConcept.encode subject
-        , optionalListPair "library" Encode.string library
-        , optionalPair "scoring" CodeableConcept.encode scoring
-        , optionalListPair "group" encodeGroup group
+        , optionalPair "id" Encode.string measure.id
+        , optionalPair "name" Encode.string measure.name
+        , optionalPair "title" Encode.string measure.title
+        , optionalPair "subtitle" Encode.string measure.subtitle
+        , optionalPair "subjectCodeableConcept" CodeableConcept.encode measure.subject
+        , optionalPair "description" Encode.string measure.description
+        , optionalListPair "library" Encode.string measure.library
+        , optionalPair "scoring" CodeableConcept.encode measure.scoring
+        , optionalListPair "group" encodeGroup measure.group
         ]
 
 
@@ -158,6 +166,7 @@ decoder =
         |> optional "title" (maybe string) Nothing
         |> optional "subtitle" (maybe string) Nothing
         |> optional "subjectCodeableConcept" (maybe CodeableConcept.decoder) Nothing
+        |> optional "description" (maybe string) Nothing
         |> optional "library" (list string) []
         |> optional "scoring" (maybe CodeableConcept.decoder) Nothing
         |> optional "group" (list groupDecoder) []

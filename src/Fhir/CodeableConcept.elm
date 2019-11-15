@@ -1,4 +1,9 @@
-module Fhir.CodeableConcept exposing (CodeableConcept, decoder, encode)
+module Fhir.CodeableConcept exposing
+    ( CodeableConcept
+    , decoder
+    , encode
+    , ofOneCoding
+    )
 
 import Fhir.Coding as Coding exposing (Coding)
 import Fhir.Encode exposing (object, optionalListPair, optionalPair)
@@ -10,6 +15,13 @@ import Json.Encode as Encode exposing (Value)
 type alias CodeableConcept =
     { coding : List Coding
     , text : Maybe String
+    }
+
+
+ofOneCoding : Coding -> CodeableConcept
+ofOneCoding coding =
+    { coding = [ coding ]
+    , text = Nothing
     }
 
 

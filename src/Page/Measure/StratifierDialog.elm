@@ -10,39 +10,26 @@ module Page.Measure.StratifierDialog exposing
 
 import Fhir.CodeableConcept exposing (CodeableConcept)
 import Fhir.Expression exposing (Expression)
-import Fhir.Http as FhirHttp
 import Fhir.Measure as Measure exposing (Measure)
-import Fhir.PrimitiveTypes exposing (Id)
-import Html exposing (Html)
+import Html exposing (Attribute, Html)
 import Html.Attributes exposing (class)
-import Http as Http
-import List.Extra exposing (getAt, updateAt)
+import Html.Events exposing (keyCode, on)
+import Json.Decode as Decode
 import Material.Button exposing (buttonConfig, textButton)
 import Material.Dialog exposing (dialog, dialogConfig)
 import Material.TextArea exposing (textArea, textAreaConfig)
 import Material.TextField exposing (textField, textFieldConfig)
-import Task
+import Maybe.Extra as MaybeExtra
 
 
-type Model msg
+type Model
     = Closed
-        { base : String
-        , onMsg : Msg -> msg
-        , onSave : Measure -> msg
-        }
-    | Open
-        { base : String
-        , onMsg : Msg -> msg
-        , onSave : Measure -> msg
-        , measureId : Id
-        , measure : Measure
-        , groupIdx : Int
-        , stratifierIdx : Int
-        }
+    | Open { stratifier : Measure.Stratifier }
 
 
-init base onMsg onSave =
-    Closed { base = base, onMsg = onMsg, onSave = onSave }
+init : Model
+init =
+    Closed
 
 
 
@@ -54,208 +41,118 @@ type Msg
     | EnteredCode String
     | EnteredDescription String
     | EnteredCriteria String
-    | ClickedSave
-    | CompletedSave (Result Http.Error Measure)
 
 
-doOpen : Id -> Measure -> Int -> Int -> Model msg -> Model msg
-doOpen measureId measure groupIdx stratifierIdx model =
-    case model of
-        Closed { base, onMsg, onSave } ->
-            Open
-                { base = base
-                , onMsg = onMsg
-                , onSave = onSave
-                , measureId = measureId
-                , measure = Debug.log "measure" measure
-                , groupIdx = groupIdx
-                , stratifierIdx = stratifierIdx
-                }
-
-        Open { base, onMsg, onSave } ->
-            Open
-                { base = base
-                , onMsg = onMsg
-                , onSave = onSave
-                , measureId = measureId
-                , measure = measure
-                , groupIdx = groupIdx
-                , stratifierIdx = stratifierIdx
-                }
+doOpen : Measure.Stratifier -> Model -> Model
+doOpen stratifier _ =
+    Open { stratifier = stratifier }
 
 
-doClose : Model msg -> Model msg
-doClose model =
-    case model of
-        Open { base, onMsg, onSave } ->
-            Closed
-                { base = base
-                , onMsg = onMsg
-                , onSave = onSave
-                }
-
-        Closed _ ->
-            model
+doClose : Model -> Model
+doClose _ =
+    Closed
 
 
-update : Msg -> Model msg -> ( Model msg, Cmd msg )
+update : Msg -> Model -> Model
 update msg model =
-    let
-        ( onMsg, onSave ) =
-            case model of
-                Open model_ ->
-                    ( model_.onMsg, model_.onSave )
-
-                Closed model_ ->
-                    ( model_.onMsg, model_.onSave )
-    in
     case msg of
         Close ->
-            ( doClose model, Cmd.none )
+            doClose model
 
         EnteredCode code ->
-            ( setCode code model, Cmd.none )
-
-        EnteredDescription description ->
-            ( setDescription description model, Cmd.none )
-
-        EnteredCriteria criteria ->
-            ( setCriteria criteria model, Cmd.none )
-
-        ClickedSave ->
-            ( model, Cmd.map onMsg (saveMeasure model) )
-
-        CompletedSave (Ok measure) ->
-            ( doClose model
-            , Task.succeed measure |> Task.perform onSave
-            )
-
-        CompletedSave (Err _) ->
-            ( model, Cmd.none )
-
-
-setCode : String -> Model msg -> Model msg
-setCode s model =
-    updateMeasure
-        (updateGroup
-            (updateStratifier
+            updateStratifier
                 (\stratifier ->
                     { stratifier
-                        | code = Just { coding = [], text = Just s }
+                        | code = Just { coding = [], text = Just code }
                     }
                 )
-            )
-        )
-        model
+                model
 
+        EnteredDescription description ->
+            updateStratifier
+                (\stratifier -> { stratifier | description = Just description })
+                model
 
-setDescription : String -> Model msg -> Model msg
-setDescription s model =
-    updateMeasure
-        (updateGroup
-            (updateStratifier
-                (\stratifier -> { stratifier | description = Just s })
-            )
-        )
-        model
-
-
-setCriteria : String -> Model msg -> Model msg
-setCriteria s model =
-    updateMeasure
-        (updateGroup
-            (updateStratifier
+        EnteredCriteria expression ->
+            updateStratifier
                 (updateCriteria
-                    (\criteria -> { criteria | expression = Just s })
+                    (\criteria -> { criteria | expression = Just expression })
                 )
-            )
-        )
-        model
+                model
 
 
 updateCriteria f stratifier =
     { stratifier | criteria = Maybe.map f stratifier.criteria }
 
 
-updateStratifier f groupIdx group =
-    { group | stratifier = updateAt groupIdx f group.stratifier }
-
-
-updateGroup f groupIdx stratifierIdx measure =
-    { measure | group = updateAt groupIdx (f stratifierIdx) measure.group }
-
-
-updateMeasure : (Int -> Int -> Measure -> Measure) -> Model msg -> Model msg
-updateMeasure f model =
+updateStratifier f model =
     case model of
-        Open ({ measure, groupIdx, stratifierIdx } as model_) ->
-            Open { model_ | measure = f groupIdx stratifierIdx measure }
+        Open data ->
+            Open { data | stratifier = f data.stratifier }
 
-        Closed _ ->
+        Closed ->
             model
-
-
-saveMeasure model =
-    case model of
-        Open { base, measureId, measure } ->
-            FhirHttp.update CompletedSave
-                base
-                "Measure"
-                measureId
-                Measure.decoder
-                (Measure.encode (Debug.log "measure" measure))
-
-        Closed _ ->
-            Cmd.none
 
 
 
 -- VIEW
 
 
-view : Model msg -> Html Msg
-view model =
+type alias Config msg =
+    { onSave : Maybe (Measure.Stratifier -> msg)
+    , onMsg : Msg -> msg
+    }
+
+
+view : Config msg -> Model -> Html msg
+view { onSave, onMsg } model =
     let
         stratifier =
             case model of
-                Open { measure, groupIdx, stratifierIdx } ->
-                    measure.group
-                        |> getAt groupIdx
-                        |> Maybe.map .stratifier
-                        |> Maybe.andThen (getAt stratifierIdx)
+                Open data ->
+                    Just data.stratifier
 
-                Closed _ ->
+                Closed ->
                     Nothing
+
+        code =
+            stratifier
+                |> Maybe.andThen .code
+                |> Maybe.andThen .text
+
+        onSave_ =
+            MaybeExtra.andMap stratifier onSave
     in
     dialog
         { dialogConfig
             | open = isOpen model
-            , onClose = Just Close
+            , onClose = Just (onMsg Close)
             , additionalAttributes = [ class "measure-stratifier-dialog" ]
         }
         { title = Just "Stratifier"
         , content =
-            [ stratifier
-                |> Maybe.andThen .code
-                |> Maybe.andThen .text
-                |> codeField
+            [ codeField onSave_ onMsg code
             , stratifier
                 |> Maybe.andThen .description
-                |> descriptionField
+                |> descriptionField onSave_ onMsg
             , stratifier
                 |> Maybe.andThen .criteria
                 |> Maybe.andThen .expression
-                |> criteriaField
+                |> criteriaField onSave_ onMsg
             ]
         , actions =
             [ textButton
                 { buttonConfig
-                    | onClick = Just Close
+                    | onClick = Just (onMsg Close)
                 }
                 "Cancel"
             , textButton
                 { buttonConfig
-                    | onClick = Just ClickedSave
+                    | onClick = onSave_
+                    , disabled =
+                        code
+                            |> Maybe.map String.isEmpty
+                            |> Maybe.withDefault True
                 }
                 "Save"
             ]
@@ -267,32 +164,64 @@ isOpen model =
         Open _ ->
             True
 
-        Closed _ ->
+        Closed ->
             False
 
 
-codeField code =
+codeField onSave onMsg code =
     textField
         { textFieldConfig
             | label = Just "Type"
-            , value = code
-            , onInput = Just EnteredCode
+            , value = Maybe.withDefault "" code
+            , onInput = Just (EnteredCode >> onMsg)
+            , required = True
+            , valid =
+                Maybe.map (String.isEmpty >> not) code
+                    |> Maybe.withDefault False
+            , additionalAttributes =
+                onSave
+                    |> Maybe.map onEnter
+                    |> Maybe.map List.singleton
+                    |> Maybe.withDefault []
         }
 
 
-descriptionField description =
+descriptionField onSave onMsg description =
     textArea
         { textAreaConfig
             | label = Just "Description"
-            , value = description
-            , onInput = Just EnteredDescription
+            , value = Maybe.withDefault "" description
+            , onInput = Just (EnteredDescription >> onMsg)
+            , additionalAttributes =
+                onSave
+                    |> Maybe.map onEnter
+                    |> Maybe.map List.singleton
+                    |> Maybe.withDefault []
         }
 
 
-criteriaField criteria =
+criteriaField onSave onMsg expression =
     textField
         { textFieldConfig
             | label = Just "Criteria"
-            , value = criteria
-            , onInput = Just EnteredCriteria
+            , value = Maybe.withDefault "" expression
+            , onInput = Just (EnteredCriteria >> onMsg)
+            , additionalAttributes =
+                onSave
+                    |> Maybe.map onEnter
+                    |> Maybe.map List.singleton
+                    |> Maybe.withDefault []
         }
+
+
+onEnter : msg -> Attribute msg
+onEnter msg =
+    let
+        isEnter code =
+            if code == 13 then
+                Decode.succeed msg
+
+            else
+                Decode.fail "not ENTER"
+    in
+    on "keyup" (Decode.andThen isEnter keyCode)

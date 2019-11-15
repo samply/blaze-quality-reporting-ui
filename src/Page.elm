@@ -55,9 +55,7 @@ view toPageMsg config drawerOpen { title, content } =
     , body =
         [ div
             [ Typography.typography
-            , style "display" "flex"
-            , style "align-items" "stretch"
-            , style "height" "100vh"
+            , class "page"
             ]
             [ drawer config
             , div [ class "content" ]

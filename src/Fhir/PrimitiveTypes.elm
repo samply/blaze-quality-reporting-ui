@@ -3,6 +3,7 @@ module Fhir.PrimitiveTypes exposing
     , Canonical
     , Code
     , Id
+    , Markdown
     , Uri
     , base64BinaryDecoder
     , encodeBase64Binary
@@ -30,6 +31,10 @@ type alias Code =
 
 
 type alias Id =
+    String
+
+
+type alias Markdown =
     String
 
 

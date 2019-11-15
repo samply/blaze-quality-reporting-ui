@@ -1,9 +1,15 @@
 :root {
-  --mdc-theme-primary: #84b5f1;
+  --mdc-theme-primary: #4354f1;
 }
 
 body {
   margin: 0;
+}
+
+.page {
+  display: flex;
+  align-items: stretch;
+  min-height: 100vh;
 }
 
 .load-or-create-panel {
@@ -12,6 +18,7 @@ body {
 }
 
 .drawer {
+  position: fixed;
   background-color: #4a5566;
 }
 
@@ -36,19 +43,50 @@ body {
 }
 
 .content {
-  background-color: #edf2f6;
+  margin-left: 256px;
   flex-grow: 1;
+/ / background-color: #edf2f6;
 }
 
 .main-content {
 }
 
-.measure-group-card__header {
-  padding: 1rem;
+.measure {
+  padding: 24px;
 }
 
-.measure-group-card__title {
-  margin: 0;
+.measure-header__title {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.measure-header__title h2 {
+  margin: 8px 0;
+}
+
+.measure-header__title .mdc-text-field {
+  flex-grow: 1;
+}
+
+.measure-header__description {
+  margin-bottom: 16px;
+}
+
+.measure-header__action-buttons {
+  display: flex;
+  justify-content: space-between;
+}
+
+.measure-stratifier {
+}
+
+.measure-stratifier__header {
+  padding: 0 1em;
+}
+
+.measure-stratifier__description {
+  padding: 0 1em;
 }
 
 .mdc-dialog .mdc-dialog__content {

@@ -1,22 +1,26 @@
 module Page.Measure exposing (Model, Msg, init, toSession, update, view)
 
-import Fhir.CodeableConcept exposing (CodeableConcept)
+import Fhir.CodeableConcept as CodeableConcept exposing (CodeableConcept)
+import Fhir.Expression as Expression
 import Fhir.Http as FhirHttp
 import Fhir.Measure as Measure exposing (Measure)
 import Fhir.PrimitiveTypes exposing (Canonical, Id)
 import Html exposing (..)
-import Html.Attributes exposing (class)
+import Html.Attributes exposing (class, classList)
 import Http
-import List.Extra exposing (getAt, updateAt)
-import Material.Button exposing (buttonConfig)
+import List.Extra exposing (getAt, removeAt, setAt, updateAt)
+import Material.Button exposing (buttonConfig, outlinedButton)
 import Material.Card
     exposing
         ( card
         , cardActionButton
+        , cardActionIcon
         , cardActions
         , cardBlock
         , cardConfig
         )
+import Material.Icon exposing (iconConfig)
+import Material.IconButton exposing (iconButton, iconButtonConfig)
 import Material.LayoutGrid
     exposing
         ( layoutGrid
@@ -27,17 +31,21 @@ import Material.LayoutGrid
         )
 import Material.List
     exposing
-        ( list
+        ( ListItem
+        , list
         , listConfig
         , listGroup
         , listGroupSubheader
         , listItem
         , listItemConfig
+        , listItemMeta
         , listItemPrimaryText
         , listItemSecondaryText
         , listItemText
         )
-import Page.Measure.PopulationDialog as PopulationDialog
+import Material.TextArea exposing (textArea, textAreaConfig)
+import Material.TextField exposing (textField, textFieldConfig)
+import Page.Measure.Header as Header
 import Page.Measure.StratifierDialog as StratifierDialog
 import Route exposing (href)
 import Session exposing (Session)
@@ -49,10 +57,10 @@ import Session exposing (Session)
 
 type alias Model =
     { session : Session
-    , populationDialog : PopulationDialog.Model Msg
-    , stratifierDialog : StratifierDialog.Model Msg
+    , stratifierDialog : StratifierDialog.Model
     , measureId : Id
-    , measure : Status Measure
+    , data : Status Data
+    , onStratifierSave : Maybe (Measure.Stratifier -> Msg)
     }
 
 
@@ -63,15 +71,19 @@ type Status a
     | Failed
 
 
+type alias Data =
+    { measure : Measure
+    , header : Header.Model
+    }
+
+
 init : Session -> Id -> ( Model, Cmd Msg )
 init session id =
     ( { session = session
-      , populationDialog =
-            PopulationDialog.init session.base PopulationDialogMsg SavedMeasure
-      , stratifierDialog =
-            StratifierDialog.init session.base StratifierDialogMsg SavedMeasure
+      , stratifierDialog = StratifierDialog.init
       , measureId = id
-      , measure = Loading
+      , data = Loading
+      , onStratifierSave = Nothing
       }
     , loadMeasure session.base id
     )
@@ -87,90 +99,144 @@ toSession model =
 
 
 type Msg
-    = ClickedPopulation Int Int
+    = ClickedHeaderSave (Maybe String) (Maybe String)
+    | ClickedStratifierEdit Int Int
+    | ClickedStratifierDelete Int Int
     | ClickedAddStratifier Int
-    | SavedMeasure Measure
+    | ClickedStratifierSaveAtAdd Int Measure.Stratifier
+    | ClickedStratifierSaveAtUpdate Int Int Measure.Stratifier
     | CompletedLoadMeasure (Result Http.Error Measure)
-    | PopulationDialogMsg PopulationDialog.Msg
+    | CompletedSaveMeasure (Result Http.Error Measure)
     | StratifierDialogMsg StratifierDialog.Msg
+    | HeaderMsg Header.Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        ClickedPopulation groupIdx populationIdx ->
-            ( case model.measure of
-                Loaded measure ->
-                    updatePopulationDialog
-                        (PopulationDialog.doOpen model.measureId
-                            measure
-                            groupIdx
-                            populationIdx
-                        )
-                        model
+        ClickedHeaderSave title description ->
+            ( model
+            , doWithData
+                (\{ measure } ->
+                    { measure
+                        | title = title
+                        , description = description
+                    }
+                        |> saveMeasure model.session.base model.measureId
+                )
+                model
+            )
+
+        ClickedStratifierEdit groupIdx stratifierIdx ->
+            ( case model.data of
+                Loaded { measure } ->
+                    let
+                        maybeStratifier =
+                            measure.group
+                                |> getAt groupIdx
+                                |> Maybe.map .stratifier
+                                |> Maybe.andThen (getAt stratifierIdx)
+                    in
+                    case Debug.log "maybeStratifier" maybeStratifier of
+                        Just stratifier ->
+                            updateStratifierDialog
+                                (StratifierDialog.doOpen stratifier)
+                                { model
+                                    | onStratifierSave =
+                                        ClickedStratifierSaveAtUpdate
+                                            groupIdx
+                                            stratifierIdx
+                                            |> Just
+                                }
+
+                        Nothing ->
+                            model
 
                 _ ->
                     model
             , Cmd.none
+            )
+
+        ClickedStratifierDelete groupIdx stratifierIdx ->
+            ( model
+            , doWithData
+                (\{ measure } ->
+                    updateGroup (deleteStratifier stratifierIdx) groupIdx measure
+                        |> saveMeasure model.session.base model.measureId
+                )
+                model
             )
 
         ClickedAddStratifier groupIdx ->
-            ( case model.measure of
-                Loaded measure ->
-                    updateStratifierDialog
-                        (StratifierDialog.doOpen model.measureId
-                            (addNewStratifier groupIdx measure)
+            ( updateStratifierDialog
+                (StratifierDialog.doOpen Measure.newStratifier)
+                { model
+                    | onStratifierSave =
+                        ClickedStratifierSaveAtAdd
                             groupIdx
-                            (Debug.log "idx"
-                                (getAt groupIdx measure.group
-                                    |> Maybe.map .stratifier
-                                    |> Maybe.map List.length
-                                    |> Maybe.withDefault 0
-                                )
-                            )
-                        )
-                        model
-
-                _ ->
-                    model
+                            |> Just
+                }
             , Cmd.none
             )
 
-        SavedMeasure measure ->
-            ( { model | measure = Loaded measure }, Cmd.none )
+        ClickedStratifierSaveAtAdd groupIdx stratifier ->
+            ( model
+            , doWithData
+                (\{ measure } ->
+                    updateGroup (addStratifier stratifier)
+                        groupIdx
+                        measure
+                        |> saveMeasure model.session.base model.measureId
+                )
+                model
+            )
+
+        ClickedStratifierSaveAtUpdate groupIdx stratifierIdx stratifier ->
+            ( model
+            , doWithData
+                (\{ measure } ->
+                    updateGroup (setStratifier stratifierIdx stratifier)
+                        groupIdx
+                        measure
+                        |> saveMeasure model.session.base model.measureId
+                )
+                model
+            )
 
         CompletedLoadMeasure (Ok measure) ->
-            ( { model | measure = Loaded measure }
-            , Cmd.none
-            )
+            ( { model | data = loaded measure }, Cmd.none )
 
         CompletedLoadMeasure (Err _) ->
-            ( { model | measure = Failed }
+            ( { model | data = Failed }
             , Cmd.none
             )
 
-        PopulationDialogMsg msg_ ->
-            let
-                ( populationDialog, cmd ) =
-                    PopulationDialog.update msg_ model.populationDialog
-            in
-            ( { model | populationDialog = populationDialog }, cmd )
+        CompletedSaveMeasure (Ok measure) ->
+            ( updateStratifierDialog StratifierDialog.doClose
+                { model | data = loaded measure }
+            , Cmd.none
+            )
+
+        CompletedSaveMeasure (Err _) ->
+            ( model, Cmd.none )
 
         StratifierDialogMsg msg_ ->
-            let
-                ( stratifierDialog, cmd ) =
-                    StratifierDialog.update msg_ model.stratifierDialog
-            in
-            ( { model | stratifierDialog = stratifierDialog }, cmd )
+            ( updateStratifierDialog (StratifierDialog.update msg_) model
+            , Cmd.none
+            )
+
+        HeaderMsg msg_ ->
+            ( updateHeader (Header.update msg_) model, Cmd.none )
 
 
-addNewStratifier : Int -> Measure -> Measure
-addNewStratifier groupIdx =
-    updateGroup
-        (addStratifier
-            { code = Nothing, description = Nothing, criteria = Nothing }
-        )
-        groupIdx
+doWithData : (Data -> Cmd Msg) -> Model -> Cmd Msg
+doWithData f model =
+    case model.data of
+        Loaded data ->
+            f data
+
+        _ ->
+            Cmd.none
 
 
 addStratifier : Measure.Stratifier -> Measure.Group -> Measure.Group
@@ -178,21 +244,57 @@ addStratifier stratifier group =
     { group | stratifier = group.stratifier ++ [ stratifier ] }
 
 
+setStratifier : Int -> Measure.Stratifier -> Measure.Group -> Measure.Group
+setStratifier idx stratifier group =
+    { group | stratifier = setAt idx stratifier group.stratifier }
+
+
+deleteStratifier : Int -> Measure.Group -> Measure.Group
+deleteStratifier idx group =
+    { group | stratifier = removeAt idx group.stratifier }
+
+
 updateGroup : (Measure.Group -> Measure.Group) -> Int -> Measure -> Measure
 updateGroup f groupIdx measure =
     { measure | group = updateAt groupIdx f measure.group }
 
 
-updatePopulationDialog f model =
-    { model | populationDialog = f model.populationDialog }
+updateHeader : (Header.Model -> Header.Model) -> Model -> Model
+updateHeader f =
+    updateData (\data -> { data | header = f data.header })
+
+
+updateData f model =
+    case model.data of
+        Loaded data ->
+            { model | data = Loaded (f data) }
+
+        _ ->
+            model
 
 
 updateStratifierDialog f model =
     { model | stratifierDialog = f model.stratifierDialog }
 
 
+loaded measure =
+    Loaded
+        { measure = measure
+        , header = Header.init measure.title measure.description
+        }
+
+
 loadMeasure base id =
     FhirHttp.read CompletedLoadMeasure base "Measure" id Measure.decoder
+
+
+saveMeasure base measureId measure =
+    FhirHttp.update CompletedSaveMeasure
+        base
+        "Measure"
+        measureId
+        Measure.decoder
+        (Measure.encode measure)
 
 
 
@@ -201,13 +303,12 @@ loadMeasure base id =
 
 view : Model -> { title : List String, content : Html Msg }
 view model =
-    case model.measure of
+    case model.data of
         Loaded measure ->
-            { title = [ "Measure", measureTitle measure ]
+            { title = [ "Measure" ]
             , content =
                 div []
-                    [ viewPopulationDialog model.populationDialog
-                    , viewStratifierDialog model.stratifierDialog
+                    [ viewStratifierDialog model
                     , viewMeasure measure
                     ]
             }
@@ -216,8 +317,7 @@ view model =
             { title = [ "Measure" ]
             , content =
                 div []
-                    [ viewPopulationDialog model.populationDialog
-                    , viewStratifierDialog model.stratifierDialog
+                    [ viewStratifierDialog model
                     ]
             }
 
@@ -225,8 +325,7 @@ view model =
             { title = [ "Measure" ]
             , content =
                 div []
-                    [ viewPopulationDialog model.populationDialog
-                    , viewStratifierDialog model.stratifierDialog
+                    [ viewStratifierDialog model
                     ]
             }
 
@@ -234,64 +333,28 @@ view model =
             { title = [ "Measure" ]
             , content =
                 div []
-                    [ viewPopulationDialog model.populationDialog
-                    , viewStratifierDialog model.stratifierDialog
+                    [ viewStratifierDialog model
                     ]
             }
 
 
-measureTitle { title, name, id } =
-    List.filterMap identity [ title, name, id ]
-        |> List.head
-        |> Maybe.withDefault "<unknown>"
-
-
-viewPopulationDialog : PopulationDialog.Model Msg -> Html Msg
-viewPopulationDialog model =
-    PopulationDialog.view model |> Html.map PopulationDialogMsg
-
-
-viewStratifierDialog : StratifierDialog.Model Msg -> Html Msg
+viewStratifierDialog : Model -> Html Msg
 viewStratifierDialog model =
-    StratifierDialog.view model |> Html.map StratifierDialogMsg
+    StratifierDialog.view
+        { onSave = model.onStratifierSave
+        , onMsg = StratifierDialogMsg
+        }
+        model.stratifierDialog
 
 
-viewMeasure : Measure -> Html Msg
-viewMeasure measure =
-    layoutGrid []
+viewMeasure : Data -> Html Msg
+viewMeasure { measure, header } =
+    layoutGrid [ class "measure" ]
         [ layoutGridInner []
-            ([ layoutGridCell [] [ text "Title" ]
-             , layoutGridCell [ span8 ] [ text (defaultNotSpecified measure.title) ]
-             , layoutGridCell [] [ text "Subtitle" ]
-             , layoutGridCell [ span8 ] [ text (defaultNotSpecified measure.subtitle) ]
-             , layoutGridCell [] [ text "Subject" ]
-             , layoutGridCell [ span8 ]
-                [ text (defaultNotSpecified (firstCode measure.subject)) ]
-             , layoutGridCell [] [ text "Library" ]
-             , layoutGridCell [ span8 ] [ libraryLink measure.library ]
-             , layoutGridCell [] [ text "Scoring" ]
-             , layoutGridCell [ span8 ]
-                [ text (defaultNotSpecified (firstCode measure.scoring)) ]
-             , layoutGridCell [ span12 ]
-                [ h2 [ class "mdc-typography--headline6" ] [ text "Groups" ] ]
-             ]
-                ++ List.indexedMap
-                    (\idx group -> layoutGridCell [ span12 ] [ viewGroup idx group ])
-                    measure.group
+            ([ Header.view ClickedHeaderSave HeaderMsg header ]
+                ++ List.indexedMap (\idx group -> viewGroup idx group) measure.group
             )
         ]
-
-
-defaultNotSpecified =
-    Maybe.withDefault "<not specified>"
-
-
-firstCode : Maybe CodeableConcept -> Maybe String
-firstCode concept =
-    concept
-        |> Maybe.map .coding
-        |> Maybe.andThen List.head
-        |> Maybe.andThen .code
 
 
 libraryLink : List Canonical -> Html Msg
@@ -303,75 +366,74 @@ libraryLink uris =
 
 
 viewGroup : Int -> Measure.Group -> Html Msg
-viewGroup idx { code, description, population, stratifier } =
-    card { cardConfig | additionalAttributes = [ class "measure-group-card" ] }
+viewGroup groupIdx { stratifier } =
+    layoutGridCell [ span12 ]
+        [ layoutGridInner [] <|
+            List.indexedMap
+                (\stratifierIdx s ->
+                    layoutGridCell []
+                        [ viewStratifier groupIdx stratifierIdx s ]
+                )
+                stratifier
+                ++ [ layoutGridCell [ span12 ]
+                        [ outlinedButton
+                            { buttonConfig
+                                | onClick = Just (ClickedAddStratifier groupIdx)
+                            }
+                            "add stratifier"
+                        ]
+                   ]
+        ]
+
+
+viewStratifier : Int -> Int -> Measure.Stratifier -> Html Msg
+viewStratifier groupIdx stratifierIdx { code, description } =
+    card
+        { cardConfig
+            | outlined = True
+            , additionalAttributes = [ class "measure-stratifier" ]
+        }
         { blocks =
             [ cardBlock <|
-                div [ class "measure-group-card__header" ]
+                div [ class "measure-stratifier__header" ]
                     [ h3
-                        [ class "measure-group-card__title"
+                        [ class "measure-stratifier__title"
                         , class "mdc-typography--headline6"
                         ]
-                        [ firstCode code
-                            |> Maybe.withDefault ("Group " ++ String.fromInt (idx + 1))
+                        [ code
+                            |> Maybe.andThen .text
+                            |> Maybe.withDefault
+                                ("Stratifier " ++ String.fromInt (stratifierIdx + 1))
                             |> text
                         ]
                     ]
             , cardBlock <|
-                listGroup [] <|
-                    [ listGroupSubheader [] [ text "Populations" ]
-                    , list { listConfig | twoLine = True }
-                        (List.indexedMap (viewPopulation idx) population)
-                    ]
-                        ++ (if List.isEmpty stratifier then
-                                []
-
-                            else
-                                [ listGroupSubheader [] [ text "Stratifiers" ]
-                                , list { listConfig | twoLine = True } <|
-                                    List.map viewStratifier stratifier
-                                ]
-                           )
+                div [ class "measure-stratifier__description" ]
+                    [ text (Maybe.withDefault "" description) ]
             ]
         , actions =
             Just <|
                 cardActions
                     { buttons =
-                        [ cardActionButton buttonConfig
-                            "Add Population"
+                        [ cardActionButton
+                            { buttonConfig
+                                | onClick =
+                                    ClickedStratifierEdit
+                                        groupIdx
+                                        stratifierIdx
+                                        |> Just
+                            }
+                            "edit"
                         , cardActionButton
                             { buttonConfig
-                                | onClick = Just (ClickedAddStratifier idx)
+                                | onClick =
+                                    ClickedStratifierDelete
+                                        groupIdx
+                                        stratifierIdx
+                                        |> Just
                             }
-                            "Add Stratifier"
+                            "delete"
                         ]
                     , icons = []
                     }
         }
-
-
-viewPopulation : Int -> Int -> Measure.Population -> Html Msg
-viewPopulation groupIdx populationIdx { code, criteria } =
-    listItem
-        { listItemConfig
-            | onClick = Just (ClickedPopulation groupIdx populationIdx)
-        }
-        [ listItemText []
-            [ listItemPrimaryText []
-                [ text (defaultNotSpecified (firstCode code)) ]
-            , listItemSecondaryText []
-                [ text (defaultNotSpecified criteria.expression) ]
-            ]
-        ]
-
-
-viewStratifier : Measure.Stratifier -> Html Msg
-viewStratifier { code, description } =
-    listItem listItemConfig
-        [ listItemText []
-            [ listItemPrimaryText []
-                [ text (defaultNotSpecified (firstCode code)) ]
-            , listItemSecondaryText []
-                [ text (defaultNotSpecified description) ]
-            ]
-        ]
