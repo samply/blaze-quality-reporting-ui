@@ -4,14 +4,7 @@ import Html exposing (..)
 import Html.Attributes exposing (class, classList)
 import Material.Button exposing (buttonConfig, outlinedButton, unelevatedButton)
 import Material.IconButton exposing (iconButton, iconButtonConfig)
-import Material.LayoutGrid
-    exposing
-        ( layoutGrid
-        , layoutGridCell
-        , layoutGridInner
-        , span12
-        , span8
-        )
+import Material.LayoutGrid exposing (layoutGridCell, span12)
 import Material.TextArea exposing (textArea, textAreaConfig)
 import Material.TextField exposing (textField, textFieldConfig)
 

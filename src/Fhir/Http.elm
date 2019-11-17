@@ -1,5 +1,14 @@
 module Fhir.Http exposing (..)
 
+{-| FHIR RESTful API interactions.
+
+
+# Creating a Resource
+
+    create CompletedCreate base "Patient" patientDecoder patient
+
+-}
+
 import Fhir.Bundle as Bundle exposing (Bundle)
 import Fhir.PrimitiveTypes exposing (Id)
 import Http
@@ -44,6 +53,8 @@ postBundle toMsg base bundle =
         }
 
 
+{-| Creates a resource.
+-}
 create :
     (Result Http.Error resource -> msg)
     -> String

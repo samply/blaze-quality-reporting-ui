@@ -36,8 +36,9 @@ init _ url navKey =
             Redirect
                 { navKey = navKey
                 , base =
-                    --     "http://localhost:8000/fhir"
-                    "https://blaze.life.uni-leipzig.de/fhir"
+                    "http://localhost:8000/fhir"
+
+                -- "https://blaze.life.uni-leipzig.de/fhir"
                 }
         }
 

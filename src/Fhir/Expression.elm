@@ -1,5 +1,6 @@
 module Fhir.Expression exposing (Expression, cql, decoder, encode)
 
+import Fhir.Encode exposing (object, optionalPair, pair)
 import Fhir.PrimitiveTypes exposing (Code, Uri)
 import Json.Decode exposing (Decoder, maybe, string, succeed)
 import Json.Decode.Pipeline exposing (optional, required)
@@ -21,11 +22,10 @@ cql =
 
 encode : Expression -> Value
 encode { language, expression } =
-    Encode.object <|
-        List.filterMap identity
-            [ Just ( "language", Encode.string language )
-            , Maybe.map (\s -> ( "expression", Encode.string s )) expression
-            ]
+    object
+        [ pair "language" Encode.string language
+        , optionalPair "expression" Encode.string expression
+        ]
 
 
 decoder : Decoder Expression

@@ -2,8 +2,11 @@ module Fhir.PrimitiveTypes exposing
     ( Base64Binary
     , Canonical
     , Code
+    , Date
+    , DateTime
     , Id
     , Markdown
+    , Time
     , Uri
     , base64BinaryDecoder
     , encodeBase64Binary
@@ -23,6 +26,18 @@ type alias Canonical =
 
 
 type alias Base64Binary =
+    String
+
+
+type alias Date =
+    String
+
+
+type alias DateTime =
+    String
+
+
+type alias Time =
     String
 
 

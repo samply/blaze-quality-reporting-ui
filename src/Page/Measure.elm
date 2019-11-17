@@ -1,51 +1,32 @@
 module Page.Measure exposing (Model, Msg, init, toSession, update, view)
 
-import Fhir.CodeableConcept as CodeableConcept exposing (CodeableConcept)
-import Fhir.Expression as Expression
+import Fhir.CodeableConcept exposing (CodeableConcept)
 import Fhir.Http as FhirHttp
 import Fhir.Measure as Measure exposing (Measure)
 import Fhir.PrimitiveTypes exposing (Canonical, Id)
 import Html exposing (..)
-import Html.Attributes exposing (class, classList)
+import Html.Attributes exposing (class)
 import Http
 import List.Extra exposing (getAt, removeAt, setAt, updateAt)
+import Loading exposing (Status(..))
 import Material.Button exposing (buttonConfig, outlinedButton)
 import Material.Card
     exposing
         ( card
         , cardActionButton
-        , cardActionIcon
         , cardActions
         , cardBlock
         , cardConfig
         )
-import Material.Icon exposing (iconConfig)
-import Material.IconButton exposing (iconButton, iconButtonConfig)
 import Material.LayoutGrid
     exposing
         ( layoutGrid
         , layoutGridCell
         , layoutGridInner
         , span12
-        , span8
         )
-import Material.List
-    exposing
-        ( ListItem
-        , list
-        , listConfig
-        , listGroup
-        , listGroupSubheader
-        , listItem
-        , listItemConfig
-        , listItemMeta
-        , listItemPrimaryText
-        , listItemSecondaryText
-        , listItemText
-        )
-import Material.TextArea exposing (textArea, textAreaConfig)
-import Material.TextField exposing (textField, textFieldConfig)
 import Page.Measure.Header as Header
+import Page.Measure.ReportPanel as ReportPanel
 import Page.Measure.StratifierDialog as StratifierDialog
 import Route exposing (href)
 import Session exposing (Session)
@@ -64,16 +45,10 @@ type alias Model =
     }
 
 
-type Status a
-    = Loading
-    | LoadingSlowly
-    | Loaded a
-    | Failed
-
-
 type alias Data =
     { measure : Measure
     , header : Header.Model
+    , reportPanel : ReportPanel.Model
     }
 
 
@@ -109,6 +84,7 @@ type Msg
     | CompletedSaveMeasure (Result Http.Error Measure)
     | StratifierDialogMsg StratifierDialog.Msg
     | HeaderMsg Header.Msg
+    | ReportPanelMsg ReportPanel.Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -204,7 +180,11 @@ update msg model =
             )
 
         CompletedLoadMeasure (Ok measure) ->
-            ( { model | data = loaded measure }, Cmd.none )
+            let
+                ( data, cmd ) =
+                    loaded model.session.base model.measureId measure
+            in
+            ( { model | data = data }, Cmd.map ReportPanelMsg cmd )
 
         CompletedLoadMeasure (Err _) ->
             ( { model | data = Failed }
@@ -212,9 +192,13 @@ update msg model =
             )
 
         CompletedSaveMeasure (Ok measure) ->
+            let
+                ( data, cmd ) =
+                    loaded model.session.base model.measureId measure
+            in
             ( updateStratifierDialog StratifierDialog.doClose
-                { model | data = loaded measure }
-            , Cmd.none
+                { model | data = data }
+            , Cmd.map ReportPanelMsg cmd
             )
 
         CompletedSaveMeasure (Err _) ->
@@ -227,6 +211,9 @@ update msg model =
 
         HeaderMsg msg_ ->
             ( updateHeader (Header.update msg_) model, Cmd.none )
+
+        ReportPanelMsg msg_ ->
+            updateReportPanel (ReportPanel.update msg_) model
 
 
 doWithData : (Data -> Cmd Msg) -> Model -> Cmd Msg
@@ -264,6 +251,23 @@ updateHeader f =
     updateData (\data -> { data | header = f data.header })
 
 
+updateReportPanel :
+    (ReportPanel.Model -> ( ReportPanel.Model, Cmd ReportPanel.Msg ))
+    -> Model
+    -> ( Model, Cmd Msg )
+updateReportPanel f =
+    updateDataWithCmd
+        (\data ->
+            let
+                ( reportPanel, cmd ) =
+                    f data.reportPanel
+            in
+            ( { data | reportPanel = reportPanel }
+            , Cmd.map ReportPanelMsg cmd
+            )
+        )
+
+
 updateData f model =
     case model.data of
         Loaded data ->
@@ -273,15 +277,35 @@ updateData f model =
             model
 
 
+updateDataWithCmd f model =
+    case model.data of
+        Loaded data ->
+            let
+                ( data_, cmd ) =
+                    f data
+            in
+            ( { model | data = Loaded data_ }, cmd )
+
+        _ ->
+            ( model, Cmd.none )
+
+
 updateStratifierDialog f model =
     { model | stratifierDialog = f model.stratifierDialog }
 
 
-loaded measure =
-    Loaded
+loaded base measureId measure =
+    let
+        ( reportPanel, cmd ) =
+            ReportPanel.init base measureId
+    in
+    ( Loaded
         { measure = measure
         , header = Header.init measure.title measure.description
+        , reportPanel = reportPanel
         }
+    , cmd
+    )
 
 
 loadMeasure base id =
@@ -348,11 +372,13 @@ viewStratifierDialog model =
 
 
 viewMeasure : Data -> Html Msg
-viewMeasure { measure, header } =
+viewMeasure { measure, header, reportPanel } =
     layoutGrid [ class "measure" ]
         [ layoutGridInner []
             ([ Header.view ClickedHeaderSave HeaderMsg header ]
-                ++ List.indexedMap (\idx group -> viewGroup idx group) measure.group
+                ++ List.indexedMap (\idx group -> viewGroup idx group)
+                    measure.group
+                ++ [ ReportPanel.view reportPanel |> Html.map ReportPanelMsg ]
             )
         ]
 
@@ -396,7 +422,7 @@ viewStratifier groupIdx stratifierIdx { code, description } =
         { blocks =
             [ cardBlock <|
                 div [ class "measure-stratifier__header" ]
-                    [ h3
+                    [ h4
                         [ class "measure-stratifier__title"
                         , class "mdc-typography--headline6"
                         ]

@@ -1,5 +1,6 @@
 module Fhir.Attachment exposing (Attachment, decoder, encode)
 
+import Fhir.Encode exposing (object, optionalPair)
 import Fhir.PrimitiveTypes
     exposing
         ( Base64Binary
@@ -20,11 +21,10 @@ type alias Attachment =
 
 encode : Attachment -> Value
 encode { contentType, data } =
-    Encode.object <|
-        List.filterMap identity
-            [ Maybe.map (\s -> ( "contentType", Encode.string s )) contentType
-            , Maybe.map (\s -> ( "data", encodeBase64Binary s )) data
-            ]
+    object
+        [ optionalPair "contentType" Encode.string contentType
+        , optionalPair "data" encodeBase64Binary data
+        ]
 
 
 decoder : Decoder Attachment

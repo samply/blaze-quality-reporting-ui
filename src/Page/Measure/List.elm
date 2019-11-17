@@ -1,11 +1,15 @@
 module Page.Measure.List exposing (Model, Msg, init, toSession, update, view)
 
 import Fhir.Bundle exposing (Bundle)
+import Fhir.CodeableConcept as CodeableConcept
+import Fhir.Expression as Expression
 import Fhir.Http as FhirHttp
 import Fhir.Measure as Measure exposing (Measure)
-import Html exposing (Html, text)
+import Html exposing (Html, div, text)
+import Html.Attributes exposing (class)
 import Http
 import Json.Decode exposing (decodeValue)
+import Material.Button exposing (buttonConfig, textButton)
 import Material.List exposing (list, listConfig, listItem, listItemConfig)
 import Route
 import Session exposing (Session)
@@ -49,7 +53,9 @@ toSession model =
 
 type Msg
     = ClickedMeasure Measure
+    | ClickedCreateMeasure
     | CompletedLoadMeasures (Result Http.Error Bundle)
+    | CompletedCreateMeasure (Result Http.Error Measure)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -62,6 +68,9 @@ update msg model =
                 |> Maybe.withDefault Cmd.none
             )
 
+        ClickedCreateMeasure ->
+            ( model, createMeasure model.session.base )
+
         CompletedLoadMeasures (Ok bundle) ->
             ( { model | measures = Loaded (decodeMeasures bundle) }
             , Cmd.none
@@ -71,6 +80,16 @@ update msg model =
             ( { model | measures = Failed }
             , Cmd.none
             )
+
+        CompletedCreateMeasure (Ok measure) ->
+            ( model
+            , measure.id
+                |> Maybe.map (pushMeasureUrl model)
+                |> Maybe.withDefault Cmd.none
+            )
+
+        CompletedCreateMeasure (Err _) ->
+            ( model, Cmd.none )
 
 
 pushMeasureUrl model id =
@@ -96,6 +115,49 @@ decodeMeasures { entry } =
         entry
 
 
+createMeasure : String -> Cmd Msg
+createMeasure base =
+    let
+        measure =
+            { id = Nothing
+            , name = Nothing
+            , title = Nothing
+            , subtitle = Nothing
+            , subject =
+                Just
+                    { coding =
+                        [ { system = Just "http://hl7.org/fhir/resource-types"
+                          , version = Nothing
+                          , code = Just "Patient"
+                          }
+                        ]
+                    , text = Nothing
+                    }
+            , description = Nothing
+            , library = []
+            , scoring = Just (CodeableConcept.ofOneCoding (Measure.scoring "cohort"))
+            , group =
+                [ { code = Nothing
+                  , description = Nothing
+                  , population =
+                        [ { code = Nothing
+                          , description = Nothing
+                          , criteria = Expression.cql
+                          }
+                        ]
+                  , stratifier = []
+                  }
+                ]
+            }
+    in
+    FhirHttp.create
+        CompletedCreateMeasure
+        base
+        "Measure"
+        Measure.decoder
+        (Measure.encode measure)
+
+
 
 -- VIEW
 
@@ -106,7 +168,11 @@ view model =
     , content =
         case model.measures of
             Loaded measures ->
-                measureList measures
+                if List.isEmpty measures then
+                    emptyListPlaceholder
+
+                else
+                    measureList measures
 
             Loading ->
                 text ""
@@ -117,6 +183,14 @@ view model =
             Failed ->
                 text "error"
     }
+
+
+emptyListPlaceholder =
+    div [ class "measure-list__empty-placeholder" ]
+        [ textButton
+            { buttonConfig | onClick = Just ClickedCreateMeasure }
+            "create first measure"
+        ]
 
 
 measureList measures =

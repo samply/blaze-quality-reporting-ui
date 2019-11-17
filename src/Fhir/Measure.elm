@@ -5,9 +5,9 @@ module Fhir.Measure exposing
     , Stratifier
     , decoder
     , encode
-    , measurePopulationType
     , new
     , newStratifier
+    , populationType
     , scoring
     )
 
@@ -75,7 +75,7 @@ new libraryUrl =
             }
     , description = Nothing
     , library = MaybeExtra.toList libraryUrl
-    , scoring = Nothing
+    , scoring = Just (CodeableConcept.ofOneCoding (scoring "cohort"))
     , group =
         [ { code = Nothing
           , description = Nothing
@@ -99,8 +99,8 @@ scoring code =
     }
 
 
-measurePopulationType : String -> Coding
-measurePopulationType code =
+populationType : String -> Coding
+populationType code =
     { system = Just "http://terminology.hl7.org/CodeSystem/measure-population"
     , version = Nothing
     , code = Just code

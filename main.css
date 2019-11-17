@@ -45,10 +45,15 @@ body {
 .content {
   margin-left: 256px;
   flex-grow: 1;
-/ / background-color: #edf2f6;
 }
 
 .main-content {
+}
+
+.measure-list__empty-placeholder {
+  display: flex;
+  justify-content: center;
+  padding-top: 4rem;
 }
 
 .measure {
@@ -87,6 +92,13 @@ body {
 
 .measure-stratifier__description {
   padding: 0 1em;
+}
+
+.measure-report-panel {
+}
+
+.measure-report-panel__title {
+  margin-top: 0;
 }
 
 .mdc-dialog .mdc-dialog__content {
