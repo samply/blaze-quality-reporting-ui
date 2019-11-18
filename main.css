@@ -48,6 +48,22 @@ body {
 }
 
 .main-content {
+  margin-top: 64px;
+}
+
+.library-list {
+}
+
+.library-list__empty-placeholder {
+  display: flex;
+  justify-content: center;
+  padding-top: 4rem;
+}
+
+.library-list__create-button {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
 }
 
 .measure-list {
@@ -65,8 +81,22 @@ body {
   bottom: 1rem;
 }
 
+.measure-page {
+  margin-right: 256px;
+}
+
+.measure-page__right-sidebar {
+  position: fixed;
+  background-color: rgb(235, 235, 235);
+  width: 256px;
+  top: 64px;
+  bottom: 0;
+  right: 0
+}
+
 .measure {
   padding: 24px;
+  flex-grow: 1;
 }
 
 .measure-header__title {
@@ -129,3 +159,58 @@ body {
 .mdc-dialog .mdc-dialog__content .mdc-text-field:not(:last-child) {
   margin-bottom: 1rem;
 }
+
+.right-sidebar__entry {
+  border-bottom: 1px solid #2f3648;
+  padding: 8px;
+}
+
+.right-sidebar__title {
+  display: flex;
+  justify-content: space-between;
+}
+
+.right-sidebar__content {
+  color: #4a5566;
+}
+
+.cql-panel {
+}
+
+.cql-panel__title {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.cql-panel__title h2 {
+  margin: 8px 0;
+}
+
+.cql-panel__title .mdc-text-field {
+  flex-grow: 1;
+}
+
+.cql-panel.cql-panel--edit .cql-panel__edit-button {
+  visibility: hidden;
+}
+
+.cql-panel__data {
+  margin-bottom: 16px;
+  font-family: "Roboto Mono",Roboto,sans-serif;
+}
+
+.cql-panel__data .mdc-text-field__input {
+  font-family: "Roboto Mono",Roboto,sans-serif;
+}
+
+.cql-panel__action-buttons {
+  display: flex;
+  justify-content: space-between;
+}
+
+.cql-panel:not(.cql-panel--edit) .cql-panel__action-buttons {
+  display: none;
+}
+
+

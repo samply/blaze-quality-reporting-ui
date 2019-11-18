@@ -1,7 +1,9 @@
 module Page.Measure exposing (Model, Msg, init, toSession, update, view)
 
+import Component.Header as Header
 import Fhir.CodeableConcept exposing (CodeableConcept)
 import Fhir.Http as FhirHttp
+import Fhir.Library exposing (Library)
 import Fhir.Measure as Measure exposing (Measure)
 import Fhir.PrimitiveTypes exposing (Canonical, Id)
 import Html exposing (..)
@@ -25,10 +27,11 @@ import Material.LayoutGrid
         , layoutGridInner
         , span12
         )
-import Page.Measure.Header as Header
+import Page.Measure.AssocLibraryDialog as AssocLibraryDialog
 import Page.Measure.ReportPanel as ReportPanel
+import Page.Measure.Sidebar.Library as SidebarLibrary
 import Page.Measure.StratifierDialog as StratifierDialog
-import Route exposing (href)
+import Route
 import Session exposing (Session)
 
 
@@ -39,6 +42,7 @@ import Session exposing (Session)
 type alias Model =
     { session : Session
     , stratifierDialog : StratifierDialog.Model
+    , assocLibraryDialog : AssocLibraryDialog.Model
     , measureId : Id
     , data : Status Data
     , onStratifierSave : Maybe (Measure.Stratifier -> Msg)
@@ -56,6 +60,7 @@ init : Session -> Id -> ( Model, Cmd Msg )
 init session id =
     ( { session = session
       , stratifierDialog = StratifierDialog.init
+      , assocLibraryDialog = AssocLibraryDialog.init session.base
       , measureId = id
       , data = Loading
       , onStratifierSave = Nothing
@@ -79,12 +84,16 @@ type Msg
     | ClickedStratifierEdit Int Int
     | ClickedStratifierDelete Int Int
     | ClickedAddStratifier Int
+    | ClickedLibraryAssoc
+    | ClickedRightSidebarLibraryEdit
     | ClickedStratifierSaveAtAdd Int Measure.Stratifier
     | ClickedStratifierSaveAtUpdate Int Int Measure.Stratifier
+    | SelectedLibrary Library
     | CompletedLoadMeasure (Result Http.Error Measure)
     | CompletedSaveMeasure (Result Http.Error Measure)
     | CompletedDeleteMeasure (Result Http.Error ())
     | StratifierDialogMsg StratifierDialog.Msg
+    | AssocLibraryDialogMsg AssocLibraryDialog.Msg
     | HeaderMsg Header.Msg
     | ReportPanelMsg ReportPanel.Msg
 
@@ -162,6 +171,12 @@ update msg model =
             , Cmd.none
             )
 
+        ClickedLibraryAssoc ->
+            updateAssocLibraryDialog AssocLibraryDialog.doOpen model
+
+        ClickedRightSidebarLibraryEdit ->
+            updateAssocLibraryDialog AssocLibraryDialog.doOpen model
+
         ClickedStratifierSaveAtAdd groupIdx stratifier ->
             ( model
             , doWithData
@@ -185,6 +200,9 @@ update msg model =
                 )
                 model
             )
+
+        SelectedLibrary library ->
+            ( model, Cmd.none )
 
         CompletedLoadMeasure (Ok measure) ->
             let
@@ -224,10 +242,30 @@ update msg model =
             , Cmd.none
             )
 
+        AssocLibraryDialogMsg msg_ ->
+            updateAssocLibraryDialog (AssocLibraryDialog.update msg_) model
+
         HeaderMsg msg_ ->
+            let
+                updateHeader f =
+                    updateData (\data -> { data | header = f data.header })
+            in
             ( updateHeader (Header.update msg_) model, Cmd.none )
 
         ReportPanelMsg msg_ ->
+            let
+                updateReportPanel f =
+                    updateDataWithCmd
+                        (\data ->
+                            let
+                                ( reportPanel, cmd ) =
+                                    f data.reportPanel
+                            in
+                            ( { data | reportPanel = reportPanel }
+                            , Cmd.map ReportPanelMsg cmd
+                            )
+                        )
+            in
             updateReportPanel (ReportPanel.update msg_) model
 
 
@@ -261,28 +299,6 @@ updateGroup f groupIdx measure =
     { measure | group = updateAt groupIdx f measure.group }
 
 
-updateHeader : (Header.Model -> Header.Model) -> Model -> Model
-updateHeader f =
-    updateData (\data -> { data | header = f data.header })
-
-
-updateReportPanel :
-    (ReportPanel.Model -> ( ReportPanel.Model, Cmd ReportPanel.Msg ))
-    -> Model
-    -> ( Model, Cmd Msg )
-updateReportPanel f =
-    updateDataWithCmd
-        (\data ->
-            let
-                ( reportPanel, cmd ) =
-                    f data.reportPanel
-            in
-            ( { data | reportPanel = reportPanel }
-            , Cmd.map ReportPanelMsg cmd
-            )
-        )
-
-
 updateData f model =
     case model.data of
         Loaded data ->
@@ -307,6 +323,16 @@ updateDataWithCmd f model =
 
 updateStratifierDialog f model =
     { model | stratifierDialog = f model.stratifierDialog }
+
+
+updateAssocLibraryDialog f model =
+    let
+        ( assocLibraryDialog, cmd ) =
+            f model.assocLibraryDialog
+    in
+    ( { model | assocLibraryDialog = assocLibraryDialog }
+    , Cmd.map AssocLibraryDialogMsg cmd
+    )
 
 
 loaded base measureId measure =
@@ -347,36 +373,41 @@ deleteMeasure base measureId =
 view : Model -> { title : List String, content : Html Msg }
 view model =
     case model.data of
-        Loaded measure ->
+        Loaded data ->
             { title = [ "Measure" ]
             , content =
-                div []
+                div [ class "main-content measure-page" ]
                     [ viewStratifierDialog model
-                    , viewMeasure measure
+                    , viewAssocLibraryDialog model
+                    , viewMeasure data
+                    , viewRightSidebar data.measure
                     ]
             }
 
         Loading ->
             { title = [ "Measure" ]
             , content =
-                div []
+                div [ class "main-content" ]
                     [ viewStratifierDialog model
+                    , viewAssocLibraryDialog model
                     ]
             }
 
         LoadingSlowly ->
             { title = [ "Measure" ]
             , content =
-                div []
+                div [ class "main-content" ]
                     [ viewStratifierDialog model
+                    , viewAssocLibraryDialog model
                     ]
             }
 
         Failed ->
             { title = [ "Measure" ]
             , content =
-                div []
+                div [ class "main-content" ]
                     [ viewStratifierDialog model
+                    , viewAssocLibraryDialog model
                     ]
             }
 
@@ -384,10 +415,29 @@ view model =
 viewStratifierDialog : Model -> Html Msg
 viewStratifierDialog model =
     StratifierDialog.view
-        { onSave = model.onStratifierSave
-        , onMsg = StratifierDialogMsg
+        { onMsg = StratifierDialogMsg
+        , onSave = model.onStratifierSave
         }
         model.stratifierDialog
+
+
+viewAssocLibraryDialog : Model -> Html Msg
+viewAssocLibraryDialog model =
+    AssocLibraryDialog.view
+        { onMsg = AssocLibraryDialogMsg
+        , onSelect = SelectedLibrary
+        }
+        model.assocLibraryDialog
+
+
+viewRightSidebar : Measure -> Html Msg
+viewRightSidebar measure =
+    let
+        config =
+            { onEdit = ClickedRightSidebarLibraryEdit }
+    in
+    div [ class "measure-page__right-sidebar right-sidebar" ]
+        [ SidebarLibrary.view config measure.library ]
 
 
 viewMeasure : Data -> Html Msg
@@ -397,7 +447,7 @@ viewMeasure { measure, header, reportPanel } =
             ([ viewHeader header ]
                 ++ List.indexedMap (\idx group -> viewGroup idx group)
                     measure.group
-                ++ [ ReportPanel.view reportPanel |> Html.map ReportPanelMsg ]
+                ++ [ viewReportPanel measure reportPanel ]
             )
         ]
 
@@ -409,14 +459,6 @@ viewHeader header =
         , onMsg = HeaderMsg
         }
         header
-
-
-libraryLink : List Canonical -> Html Msg
-libraryLink uris =
-    uris
-        |> List.head
-        |> Maybe.map (\uri -> a [ href (Route.LibraryByUrl uri) ] [ text uri ])
-        |> Maybe.withDefault (text "no associated library")
 
 
 viewGroup : Int -> Measure.Group -> Html Msg
@@ -491,3 +533,14 @@ viewStratifier groupIdx stratifierIdx { code, description } =
                     , icons = []
                     }
         }
+
+
+viewReportPanel measure reportPanel =
+    let
+        config =
+            { ready = not (List.isEmpty measure.library)
+            , onLibraryAssoc = ClickedLibraryAssoc
+            , onMsg = ReportPanelMsg
+            }
+    in
+    ReportPanel.view config reportPanel

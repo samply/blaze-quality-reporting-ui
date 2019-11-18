@@ -4,12 +4,12 @@ import Fhir.Bundle exposing (Bundle)
 import Fhir.Http as FhirHttp
 import Fhir.MeasureReport as MeasureReport exposing (MeasureReport, Status(..))
 import Fhir.PrimitiveTypes exposing (Id)
-import Html exposing (Html, h3, text)
+import Html exposing (Html, div, h3, text)
 import Html.Attributes exposing (class)
 import Http
 import Json.Decode exposing (decodeValue)
 import Loading
-import Material.Button exposing (buttonConfig, outlinedButton)
+import Material.Button exposing (buttonConfig, outlinedButton, textButton)
 import Material.Icon exposing (icon, iconConfig)
 import Material.LayoutGrid exposing (layoutGridCell, span12)
 import Material.List
@@ -136,8 +136,15 @@ decodeReports { entry } =
 -- VIEW
 
 
-view : Model -> Html Msg
-view model =
+type alias Config msg =
+    { ready : Bool
+    , onLibraryAssoc : msg
+    , onMsg : Msg -> msg
+    }
+
+
+view : Config msg -> Model -> Html msg
+view config model =
     layoutGridCell [ span12, class "measure-report-panel" ]
         [ h3
             [ class "measure-report-panel__title"
@@ -147,9 +154,7 @@ view model =
         , case model.reports of
             Loading.Loaded reports ->
                 if List.isEmpty reports then
-                    outlinedButton
-                        { buttonConfig | onClick = Just ClickedGenerate }
-                        "Generate First Report"
+                    emptyListPlaceholder config
 
                 else
                     viewReportList reports
@@ -163,6 +168,23 @@ view model =
             Loading.Failed ->
                 text "error"
         ]
+
+
+emptyListPlaceholder { ready, onLibraryAssoc, onMsg } =
+    div [ class "measure-report-panel__empty-placeholder" ] <|
+        if ready then
+            [ outlinedButton
+                { buttonConfig | onClick = Just (onMsg ClickedGenerate) }
+                "Generate First Report"
+            ]
+
+        else
+            [ text "Please"
+            , textButton
+                { buttonConfig | onClick = Just onLibraryAssoc }
+                "associate"
+            , text "a library before generating a report."
+            ]
 
 
 viewReportList reports =

@@ -37,7 +37,7 @@ init =
 
 
 type Msg
-    = Close
+    = ClickedClose
     | EnteredCode String
     | EnteredDescription String
     | EnteredCriteria String
@@ -56,7 +56,7 @@ doClose _ =
 update : Msg -> Model -> Model
 update msg model =
     case msg of
-        Close ->
+        ClickedClose ->
             doClose model
 
         EnteredCode code ->
@@ -99,13 +99,13 @@ updateStratifier f model =
 
 
 type alias Config msg =
-    { onSave : Maybe (Measure.Stratifier -> msg)
-    , onMsg : Msg -> msg
+    { onMsg : Msg -> msg
+    , onSave : Maybe (Measure.Stratifier -> msg)
     }
 
 
 view : Config msg -> Model -> Html msg
-view { onSave, onMsg } model =
+view { onMsg, onSave } model =
     let
         stratifier =
             case model of
@@ -126,7 +126,7 @@ view { onSave, onMsg } model =
     dialog
         { dialogConfig
             | open = isOpen model
-            , onClose = Just (onMsg Close)
+            , onClose = Just (onMsg ClickedClose)
             , additionalAttributes = [ class "measure-stratifier-dialog" ]
         }
         { title = Just "Stratifier"
@@ -143,7 +143,7 @@ view { onSave, onMsg } model =
         , actions =
             [ textButton
                 { buttonConfig
-                    | onClick = Just (onMsg Close)
+                    | onClick = Just (onMsg ClickedClose)
                 }
                 "Cancel"
             , textButton

@@ -13,17 +13,21 @@ import Url.Parser as Parser exposing ((</>), Parser, oneOf, s, string)
 
 
 type Route
-    = MeasureList
-    | Measure Id
+    = LibraryList
+    | Library Id
     | LibraryByUrl Uri
+    | MeasureList
+    | Measure Id
 
 
 parser : Parser (Route -> a) a
 parser =
     oneOf
-        [ Parser.map MeasureList Parser.top
-        , Parser.map Measure (s "measure" </> string)
+        [ Parser.map LibraryList (s "library")
+        , Parser.map Library (s "library" </> string)
         , Parser.map LibraryByUrl (s "library-by-uri" </> string)
+        , Parser.map MeasureList Parser.top
+        , Parser.map Measure (s "measure" </> string)
         ]
 
 
@@ -59,13 +63,19 @@ routeToString page =
     let
         pieces =
             case page of
+                LibraryList ->
+                    [ "library" ]
+
+                Library id ->
+                    [ "library", id ]
+
+                LibraryByUrl uri ->
+                    [ "library-by-uri", uri ]
+
                 MeasureList ->
                     []
 
                 Measure id ->
                     [ "measure", id ]
-
-                LibraryByUrl uri ->
-                    [ "library-by-uri", uri ]
     in
     "#/" ++ String.join "/" pieces

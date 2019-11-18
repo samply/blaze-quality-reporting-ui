@@ -1,4 +1,4 @@
-module Page.Measure.Header exposing (Model, Msg, init, update, view)
+module Component.Header exposing (Model, Msg, init, update, view)
 
 import Html exposing (..)
 import Html.Attributes exposing (class, classList)

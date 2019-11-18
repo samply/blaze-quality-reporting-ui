@@ -2,7 +2,7 @@ module Page exposing (..)
 
 import Browser exposing (Document)
 import Html exposing (Html, div, h3, h6, text)
-import Html.Attributes exposing (class, style)
+import Html.Attributes exposing (class)
 import Material.Drawer
     exposing
         ( drawerContent
@@ -28,7 +28,8 @@ import Material.Typography as Typography
 
 
 type NavItem
-    = Measures
+    = Libraries
+    | Measures
 
 
 type alias Config msg =
@@ -60,8 +61,7 @@ view toPageMsg config drawerOpen { title, content } =
             [ drawer config
             , div [ class "content" ]
                 [ appBar config.onNavIconClick title
-                , div [ class "main-content mdc-top-app-bar--fixed-adjust" ]
-                    [ Html.map toPageMsg content ]
+                , Html.map toPageMsg content
                 ]
             ]
         ]
@@ -80,7 +80,7 @@ drawer config =
             [ list listConfig
                 [ listItem
                     { listItemConfig
-                        | onClick = Just (config.onNavItemClick Measures)
+                        | onClick = Just (config.onNavItemClick Libraries)
                     }
                     [ listItemGraphic [] [ icon iconConfig "library_books" ]
                     , text "Libraries"

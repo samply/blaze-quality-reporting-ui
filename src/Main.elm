@@ -5,6 +5,8 @@ import Browser.Navigation as Nav
 import Json.Encode exposing (Value)
 import Page
 import Page.Blank as Blank
+import Page.Library as Library
+import Page.Library.List as LibraryList
 import Page.Measure as Measure
 import Page.Measure.List as MeasureList
 import Page.NotFound as NotFound
@@ -24,6 +26,8 @@ type alias Model =
 type Page
     = Redirect Session
     | NotFound Session
+    | LibraryList LibraryList.Model
+    | Library Library.Model
     | MeasureList MeasureList.Model
     | Measure Measure.Model
 
@@ -36,7 +40,7 @@ init _ url navKey =
             Redirect
                 { navKey = navKey
                 , base =
-                    "http://localhost:8000/fhir"
+                    "http://bierdose:8000/fhir"
 
                 -- "https://blaze.life.uni-leipzig.de/fhir"
                 }
@@ -53,6 +57,8 @@ type Msg
     | ClickedNavIcon
     | ClickedNavItem Page.NavItem
     | ClosedDrawer
+    | GotLibraryListMsg LibraryList.Msg
+    | GotLibraryMsg Library.Msg
     | GotMeasureListMsg MeasureList.Msg
     | GotMeasureMsg Measure.Msg
 
@@ -101,6 +107,14 @@ update msg model =
         ( ClosedDrawer, _ ) ->
             ( { model | drawerOpen = False }, Cmd.none )
 
+        ( GotLibraryListMsg subMsg, LibraryList libraryList ) ->
+            LibraryList.update subMsg libraryList
+                |> updateWith LibraryList GotLibraryListMsg model
+
+        ( GotLibraryMsg subMsg, Library library ) ->
+            Library.update subMsg library
+                |> updateWith Library GotLibraryMsg model
+
         ( GotMeasureListMsg subMsg, MeasureList measureList ) ->
             MeasureList.update subMsg measureList
                 |> updateWith MeasureList GotMeasureListMsg model
@@ -123,6 +137,12 @@ toSession page =
         NotFound session ->
             session
 
+        LibraryList libraryList ->
+            LibraryList.toSession libraryList
+
+        Library library ->
+            Library.toSession library
+
         MeasureList measureList ->
             MeasureList.toSession measureList
 
@@ -140,6 +160,14 @@ changeRouteTo maybeRoute model =
         Nothing ->
             ( { model | page = NotFound session }, Cmd.none )
 
+        Just Route.LibraryList ->
+            LibraryList.init session
+                |> updateWith LibraryList GotLibraryListMsg model
+
+        Just (Route.Library id) ->
+            Library.init session id
+                |> updateWith Library GotLibraryMsg model
+
         Just Route.MeasureList ->
             MeasureList.init session
                 |> updateWith MeasureList GotMeasureListMsg model
@@ -156,6 +184,9 @@ changeRouteTo maybeRoute model =
 toRoute : Page.NavItem -> Route
 toRoute navItem =
     case navItem of
+        Page.Libraries ->
+            Route.LibraryList
+
         Page.Measures ->
             Route.MeasureList
 
@@ -221,6 +252,12 @@ view model =
                 pageViewConfig
                 model.drawerOpen
                 NotFound.view
+
+        LibraryList libraryList ->
+            viewPage GotLibraryListMsg (LibraryList.view libraryList)
+
+        Library library ->
+            viewPage GotLibraryMsg (Library.view library)
 
         MeasureList measureList ->
             viewPage GotMeasureListMsg (MeasureList.view measureList)

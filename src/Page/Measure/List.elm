@@ -188,15 +188,15 @@ view model =
 
 
 emptyListPlaceholder =
-    div [ class "measure-list__empty-placeholder" ]
+    div [ class "main-content measure-list__empty-placeholder" ]
         [ textButton
             { buttonConfig | onClick = Just ClickedCreateMeasure }
-            "create first measure"
+            "create the first measure"
         ]
 
 
 measureList measures =
-    div [ class "measure-list" ]
+    div [ class "main-content measure-list" ]
         [ createButton
         , list listConfig <|
             List.map measureListItem measures
