@@ -75,6 +75,7 @@ toSession model =
 
 type Msg
     = ClickedHeaderSave (Maybe String) (Maybe String)
+    | ClickedHeaderDelete
     | ClickedStratifierEdit Int Int
     | ClickedStratifierDelete Int Int
     | ClickedAddStratifier Int
@@ -82,6 +83,7 @@ type Msg
     | ClickedStratifierSaveAtUpdate Int Int Measure.Stratifier
     | CompletedLoadMeasure (Result Http.Error Measure)
     | CompletedSaveMeasure (Result Http.Error Measure)
+    | CompletedDeleteMeasure (Result Http.Error ())
     | StratifierDialogMsg StratifierDialog.Msg
     | HeaderMsg Header.Msg
     | ReportPanelMsg ReportPanel.Msg
@@ -101,6 +103,11 @@ update msg model =
                         |> saveMeasure model.session.base model.measureId
                 )
                 model
+            )
+
+        ClickedHeaderDelete ->
+            ( model
+            , deleteMeasure model.session.base model.measureId
             )
 
         ClickedStratifierEdit groupIdx stratifierIdx ->
@@ -202,6 +209,14 @@ update msg model =
             )
 
         CompletedSaveMeasure (Err _) ->
+            ( model, Cmd.none )
+
+        CompletedDeleteMeasure (Ok _) ->
+            ( model
+            , Route.pushUrl (Session.navKey model.session) Route.MeasureList
+            )
+
+        CompletedDeleteMeasure (Err _) ->
             ( model, Cmd.none )
 
         StratifierDialogMsg msg_ ->
@@ -321,6 +336,10 @@ saveMeasure base measureId measure =
         (Measure.encode measure)
 
 
+deleteMeasure base measureId =
+    FhirHttp.delete CompletedDeleteMeasure base "Measure" measureId
+
+
 
 -- VIEW
 
@@ -375,12 +394,21 @@ viewMeasure : Data -> Html Msg
 viewMeasure { measure, header, reportPanel } =
     layoutGrid [ class "measure" ]
         [ layoutGridInner []
-            ([ Header.view ClickedHeaderSave HeaderMsg header ]
+            ([ viewHeader header ]
                 ++ List.indexedMap (\idx group -> viewGroup idx group)
                     measure.group
                 ++ [ ReportPanel.view reportPanel |> Html.map ReportPanelMsg ]
             )
         ]
+
+
+viewHeader header =
+    Header.view
+        { onSave = ClickedHeaderSave
+        , onDelete = ClickedHeaderDelete
+        , onMsg = HeaderMsg
+        }
+        header
 
 
 libraryLink : List Canonical -> Html Msg

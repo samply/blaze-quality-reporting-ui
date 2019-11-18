@@ -10,6 +10,7 @@ import Html.Attributes exposing (class)
 import Http
 import Json.Decode exposing (decodeValue)
 import Material.Button exposing (buttonConfig, textButton)
+import Material.Fab exposing (fab, fabConfig)
 import Material.List exposing (list, listConfig, listItem, listItemConfig)
 import Route
 import Session exposing (Session)
@@ -135,7 +136,8 @@ createMeasure base =
                     }
             , description = Nothing
             , library = []
-            , scoring = Just (CodeableConcept.ofOneCoding (Measure.scoring "cohort"))
+            , scoring =
+                Just (CodeableConcept.ofOneCoding (Measure.scoring "cohort"))
             , group =
                 [ { code = Nothing
                   , description = Nothing
@@ -194,8 +196,11 @@ emptyListPlaceholder =
 
 
 measureList measures =
-    list listConfig <|
-        List.map measureListItem measures
+    div [ class "measure-list" ]
+        [ createButton
+        , list listConfig <|
+            List.map measureListItem measures
+        ]
 
 
 measureListItem measure =
@@ -207,3 +212,12 @@ measureTitle { title, name, id } =
     List.filterMap identity [ title, name, id ]
         |> List.head
         |> Maybe.withDefault "<unknown>"
+
+
+createButton =
+    fab
+        { fabConfig
+            | onClick = Just ClickedCreateMeasure
+            , additionalAttributes = [ class "measure-list__create-button" ]
+        }
+        "add"

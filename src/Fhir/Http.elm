@@ -88,3 +88,21 @@ update toMsg base type_ id decoder resource =
         , timeout = Nothing
         , tracker = Nothing
         }
+
+
+delete :
+    (Result Http.Error () -> msg)
+    -> String
+    -> String
+    -> String
+    -> Cmd msg
+delete toMsg base type_ id =
+    Http.request
+        { method = "DELETE"
+        , headers = []
+        , url = UrlBuilder.crossOrigin base [ type_, id ] []
+        , body = Http.emptyBody
+        , expect = Http.expectWhatever toMsg
+        , timeout = Nothing
+        , tracker = Nothing
+        }

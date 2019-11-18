@@ -50,10 +50,19 @@ body {
 .main-content {
 }
 
+.measure-list {
+}
+
 .measure-list__empty-placeholder {
   display: flex;
   justify-content: center;
   padding-top: 4rem;
+}
+
+.measure-list__create-button {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
 }
 
 .measure {
@@ -81,6 +90,15 @@ body {
 .measure-header__action-buttons {
   display: flex;
   justify-content: space-between;
+}
+
+.measure-header__action-buttons-right {
+  display: inline-flex;
+}
+
+.mdc-button.measure-header__delete-button {
+  background-color: #db401e;
+  margin-right: 1rem;
 }
 
 .measure-stratifier {

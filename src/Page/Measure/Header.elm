@@ -67,8 +67,15 @@ blankToNothing s =
 -- VIEW
 
 
-view : (Maybe String -> Maybe String -> msg) -> (Msg -> msg) -> Model -> Html msg
-view onSave onMsg { title, description, edit } =
+type alias Config msg =
+    { onSave : Maybe String -> Maybe String -> msg
+    , onDelete : msg
+    , onMsg : Msg -> msg
+    }
+
+
+view : Config msg -> Model -> Html msg
+view { onSave, onDelete, onMsg } { title, description, edit } =
     layoutGridCell
         [ class "measure-header"
         , span12
@@ -105,11 +112,24 @@ view onSave onMsg { title, description, edit } =
                         ]
                     , div [ class "measure-header__action-buttons" ]
                         [ unelevatedButton
-                            { buttonConfig | onClick = Just (onSave title description) }
+                            { buttonConfig
+                                | onClick = Just (onSave title description)
+                            }
                             "Save"
-                        , outlinedButton
-                            { buttonConfig | onClick = Just (onMsg ClickedCancel) }
-                            "Cancel"
+                        , div [ class "measure-header__action-buttons-right" ]
+                            [ unelevatedButton
+                                { buttonConfig
+                                    | onClick = Just onDelete
+                                    , additionalAttributes =
+                                        [ class "measure-header__delete-button" ]
+                                }
+                                "Delete"
+                            , outlinedButton
+                                { buttonConfig
+                                    | onClick = Just (onMsg ClickedCancel)
+                                }
+                                "Cancel"
+                            ]
                         ]
                     ]
 
