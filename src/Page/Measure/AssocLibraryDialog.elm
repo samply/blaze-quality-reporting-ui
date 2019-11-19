@@ -12,12 +12,24 @@ import Fhir.Bundle exposing (Bundle)
 import Fhir.Http as FhirHttp
 import Fhir.Library as Library exposing (Library)
 import Html exposing (Html, text)
+import Html.Attributes exposing (class)
 import Http as Http
 import Json.Decode exposing (decodeValue)
-import List
 import Material.Dialog exposing (dialog, dialogConfig)
-import Material.List exposing (list, listConfig, listItem, listItemConfig)
+import Material.Icon exposing (icon, iconConfig)
+import Material.List
+    exposing
+        ( list
+        , listConfig
+        , listItem
+        , listItemConfig
+        , listItemMeta
+        , listItemPrimaryText
+        , listItemSecondaryText
+        , listItemText
+        )
 import Material.TextField exposing (textField, textFieldConfig)
+import Maybe.Extra as MaybeExtra
 import Process
 import Task
 import Url.Builder as UrlBuilder
@@ -138,6 +150,7 @@ view { onMsg, onSelect } model =
         { dialogConfig
             | open = open
             , onClose = Just (onMsg ClickedClose)
+            , additionalAttributes = [ class "measure-assoc-library-dialog" ]
         }
         { title = Just "Load Library"
         , content =
@@ -163,16 +176,46 @@ emptyListPlaceholder =
 
 
 libraryList onSelect libraries =
-    list listConfig <|
+    list { listConfig | twoLine = True } <|
         List.map (libraryListItem onSelect) libraries
 
 
 libraryListItem onSelect library =
-    listItem { listItemConfig | onClick = Just <| onSelect library }
-        [ text <| libraryTitle library ]
+    let
+        disabled =
+            MaybeExtra.isNothing library.url
+    in
+    listItem
+        { listItemConfig
+            | onClick = Just <| onSelect library
+            , disabled = disabled
+        }
+        [ listItemText []
+            [ listItemPrimaryText []
+                [ titleText library ]
+            , listItemSecondaryText []
+                [ urlText library ]
+            ]
+        , meta disabled
+        ]
 
 
-libraryTitle { title, name, url } =
-    List.filterMap identity [ title, name, url ]
+titleText { title, name } =
+    List.filterMap identity [ title, name ]
         |> List.head
         |> Maybe.withDefault "<unknown>"
+        |> text
+
+
+urlText { url } =
+    url
+        |> Maybe.withDefault "Libraries without URL's can't be referenced."
+        |> text
+
+
+meta disabled =
+    if disabled then
+        listItemMeta [] [ icon iconConfig "warning" ]
+
+    else
+        text ""

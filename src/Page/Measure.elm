@@ -1,12 +1,13 @@
 module Page.Measure exposing (Model, Msg, init, toSession, update, view)
 
 import Component.Header as Header
+import Component.Sidebar exposing (sidebar, sidebarConfig)
 import Fhir.CodeableConcept exposing (CodeableConcept)
 import Fhir.Http as FhirHttp
 import Fhir.Library exposing (Library)
 import Fhir.Measure as Measure exposing (Measure)
 import Fhir.PrimitiveTypes exposing (Canonical, Id)
-import Html exposing (..)
+import Html exposing (Html, div, h4, text)
 import Html.Attributes exposing (class)
 import Http
 import List.Extra exposing (getAt, removeAt, setAt, updateAt)
@@ -27,6 +28,7 @@ import Material.LayoutGrid
         , layoutGridInner
         , span12
         )
+import Maybe.Extra as MaybeExtra
 import Page.Measure.AssocLibraryDialog as AssocLibraryDialog
 import Page.Measure.ReportPanel as ReportPanel
 import Page.Measure.Sidebar.Library as SidebarLibrary
@@ -85,7 +87,7 @@ type Msg
     | ClickedStratifierDelete Int Int
     | ClickedAddStratifier Int
     | ClickedLibraryAssoc
-    | ClickedRightSidebarLibraryEdit
+    | ClickedSidebarLibraryEdit
     | ClickedStratifierSaveAtAdd Int Measure.Stratifier
     | ClickedStratifierSaveAtUpdate Int Int Measure.Stratifier
     | SelectedLibrary Library
@@ -174,7 +176,7 @@ update msg model =
         ClickedLibraryAssoc ->
             updateAssocLibraryDialog AssocLibraryDialog.doOpen model
 
-        ClickedRightSidebarLibraryEdit ->
+        ClickedSidebarLibraryEdit ->
             updateAssocLibraryDialog AssocLibraryDialog.doOpen model
 
         ClickedStratifierSaveAtAdd groupIdx stratifier ->
@@ -202,7 +204,14 @@ update msg model =
             )
 
         SelectedLibrary library ->
-            ( model, Cmd.none )
+            ( model
+            , doWithData
+                (\{ measure } ->
+                    { measure | library = MaybeExtra.toList library.url }
+                        |> saveMeasure model.session.base model.measureId
+                )
+                model
+            )
 
         CompletedLoadMeasure (Ok measure) ->
             let
@@ -221,8 +230,9 @@ update msg model =
                 ( data, cmd ) =
                     loaded model.session.base model.measureId measure
             in
-            ( updateStratifierDialog StratifierDialog.doClose
-                { model | data = data }
+            ( { model | data = data }
+                |> updateStratifierDialog StratifierDialog.doClose
+                |> closeAssocLibraryDialog
             , Cmd.map ReportPanelMsg cmd
             )
 
@@ -325,6 +335,13 @@ updateStratifierDialog f model =
     { model | stratifierDialog = f model.stratifierDialog }
 
 
+closeAssocLibraryDialog model =
+    { model
+        | assocLibraryDialog =
+            AssocLibraryDialog.doClose model.assocLibraryDialog
+    }
+
+
 updateAssocLibraryDialog f model =
     let
         ( assocLibraryDialog, cmd ) =
@@ -380,7 +397,7 @@ view model =
                     [ viewStratifierDialog model
                     , viewAssocLibraryDialog model
                     , viewMeasure data
-                    , viewRightSidebar data.measure
+                    , viewSidebar data.measure
                     ]
             }
 
@@ -430,13 +447,13 @@ viewAssocLibraryDialog model =
         model.assocLibraryDialog
 
 
-viewRightSidebar : Measure -> Html Msg
-viewRightSidebar measure =
+viewSidebar : Measure -> Html Msg
+viewSidebar measure =
     let
         config =
-            { onEdit = ClickedRightSidebarLibraryEdit }
+            { onEdit = ClickedSidebarLibraryEdit }
     in
-    div [ class "measure-page__right-sidebar right-sidebar" ]
+    sidebar sidebarConfig
         [ SidebarLibrary.view config measure.library ]
 
 

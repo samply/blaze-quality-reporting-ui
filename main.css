@@ -51,6 +51,53 @@ body {
   margin-top: 64px;
 }
 
+.main-content .mdc-list .mdc-list-item__meta {
+  margin-left: 1rem;
+}
+
+
+/*
+ * Sidebar
+ */
+
+.sidebar {
+  position: fixed;
+  background-color: rgb(235, 235, 235);
+  width: 256px;
+  top: 64px;
+  bottom: 0;
+  right: 0;
+  padding: 0.5rem;
+  border-left: 1px solid #d6d6d6;
+}
+
+.sidebar-entry {
+  border-bottom: 1px solid #c9c9c9;
+  padding: 8px;
+}
+
+.sidebar-entry__title {
+  display: flex;
+  justify-content: space-between;
+}
+
+.sidebar-entry__content {
+  display: flex;
+  flex-direction: column;
+  color: #4a5566;
+}
+
+.sidebar-entry__content .mdc-text-field {
+  flex-grow: 1;
+  margin: 0.5rem 0;
+  background-color: #fff;
+}
+
+
+/*
+ * Library List
+ */
+
 .library-list {
 }
 
@@ -83,15 +130,6 @@ body {
 
 .measure-page {
   margin-right: 256px;
-}
-
-.measure-page__right-sidebar {
-  position: fixed;
-  background-color: rgb(235, 235, 235);
-  width: 256px;
-  top: 64px;
-  bottom: 0;
-  right: 0
 }
 
 .measure {
@@ -160,20 +198,6 @@ body {
   margin-bottom: 1rem;
 }
 
-.right-sidebar__entry {
-  border-bottom: 1px solid #2f3648;
-  padding: 8px;
-}
-
-.right-sidebar__title {
-  display: flex;
-  justify-content: space-between;
-}
-
-.right-sidebar__content {
-  color: #4a5566;
-}
-
 .cql-panel {
 }
 
@@ -197,11 +221,11 @@ body {
 
 .cql-panel__data {
   margin-bottom: 16px;
-  font-family: "Roboto Mono",Roboto,sans-serif;
+  font-family: "Roboto Mono", Roboto, sans-serif;
 }
 
 .cql-panel__data .mdc-text-field__input {
-  font-family: "Roboto Mono",Roboto,sans-serif;
+  font-family: "Roboto Mono", Roboto, sans-serif;
 }
 
 .cql-panel__action-buttons {

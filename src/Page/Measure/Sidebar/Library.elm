@@ -1,26 +1,37 @@
 module Page.Measure.Sidebar.Library exposing (view)
 
+import Component.Sidebar
+    exposing
+        ( SidebarEntry
+        , sidebarEditButton
+        , sidebarEditButtonConfig
+        , sidebarEntry
+        , sidebarEntryConfig
+        , sidebarEntryContent
+        , sidebarEntryTitle
+        )
 import Fhir.PrimitiveTypes exposing (Canonical, Id)
-import Html exposing (Html, a, div, text)
-import Html.Attributes exposing (class)
-import Material.Button exposing (buttonConfig, textButton)
+import Html exposing (Html, a, text)
 import Route exposing (href)
+
+
+
+-- VIEW
 
 
 type alias Config msg =
     { onEdit : msg }
 
 
-view : Config msg -> List Canonical -> Html msg
+view : Config msg -> List Canonical -> SidebarEntry msg
 view { onEdit } library =
-    div [ class "right-sidebar__entry" ]
-        [ div [ class "right-sidebar__title mdc-typography--subtitle1" ]
+    sidebarEntry sidebarEntryConfig
+        [ sidebarEntryTitle []
             [ text "Library"
-            , textButton
-                { buttonConfig | dense = True, onClick = Just onEdit }
-                "edit"
+            , sidebarEditButton
+                { sidebarEditButtonConfig | onClick = Just onEdit }
             ]
-        , div [ class "right-sidebar__content mdc-typography--body2" ]
+        , sidebarEntryContent []
             [ libraryLink library ]
         ]
 

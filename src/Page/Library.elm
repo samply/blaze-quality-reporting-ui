@@ -29,6 +29,7 @@ import Material.LayoutGrid
         )
 import Maybe.Extra as MaybeExtra
 import Page.Library.CqlPanel as CqlPanel
+import Page.Library.Sidebar as Sidebar
 import Route
 import Session exposing (Session)
 
@@ -47,6 +48,7 @@ type alias Model =
 type alias Data =
     { library : Library
     , header : Header.Model
+    , sidebar : Sidebar.Model
     , cqlPanel : CqlPanel.Model
     }
 
@@ -74,10 +76,12 @@ type Msg
     = ClickedHeaderSave (Maybe String) (Maybe String)
     | ClickedHeaderDelete
     | ClickedCqlPanelSave (Maybe Attachment)
+    | ClickedSave Library
     | CompletedLoadLibrary (Result Http.Error Library)
     | CompletedSaveLibrary (Result Http.Error Library)
     | CompletedDeleteLibrary (Result Http.Error ())
     | HeaderMsg Header.Msg
+    | SidebarMsg Sidebar.Msg
     | CqlPanelMsg CqlPanel.Msg
 
 
@@ -114,6 +118,9 @@ update msg model =
                 model
             )
 
+        ClickedSave library ->
+            ( model, saveLibrary model.session.base model.libraryId library )
+
         CompletedLoadLibrary (Ok library) ->
             ( { model | data = loaded library }, Cmd.none )
 
@@ -142,6 +149,13 @@ update msg model =
                     updateData (\data -> { data | header = f data.header })
             in
             ( updateHeader (Header.update msg_) model, Cmd.none )
+
+        SidebarMsg msg_ ->
+            let
+                updateSidebar f =
+                    updateData (\data -> { data | sidebar = f data.sidebar })
+            in
+            ( updateSidebar (Sidebar.update msg_) model, Cmd.none )
 
         CqlPanelMsg msg_ ->
             let
@@ -174,6 +188,7 @@ loaded library =
     Loaded
         { library = library
         , header = Header.init library.title library.description
+        , sidebar = Sidebar.init library
         , cqlPanel = CqlPanel.init (library.content |> List.head)
         }
 
@@ -207,8 +222,8 @@ view model =
             , content =
                 div [ class "main-content library-page" ]
                     [ viewLibrary data
-
-                    --, viewRightSidebar data.library
+                    , Sidebar.view { onMsg = SidebarMsg, onSave = ClickedSave }
+                        data.sidebar
                     ]
             }
 
@@ -229,18 +244,6 @@ view model =
             , content =
                 div [ class "main-content" ] []
             }
-
-
-
-{- viewRightSidebar : Library -> Html Msg
-   viewRightSidebar library =
-       let
-           config =
-               { onEdit = ClickedRightSidebarLibraryEdit }
-       in
-       div [ class "library-page__right-sidebar right-sidebar" ]
-           [ SidebarLibrary.view config library.library ]
--}
 
 
 viewLibrary : Data -> Html Msg
