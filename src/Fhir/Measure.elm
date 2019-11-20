@@ -5,7 +5,6 @@ module Fhir.Measure exposing
     , Stratifier
     , decoder
     , encode
-    , new
     , newStratifier
     , populationType
     , scoring
@@ -57,40 +56,6 @@ type alias Stratifier =
     }
 
 
-new : Maybe Uri -> Measure
-new libraryUrl =
-    { id = Nothing
-    , name = Nothing
-    , title = Nothing
-    , subtitle = Nothing
-    , subject =
-        Just
-            { coding =
-                [ { system = Just "http://hl7.org/fhir/resource-types"
-                  , version = Nothing
-                  , code = Just "Patient"
-                  }
-                ]
-            , text = Nothing
-            }
-    , description = Nothing
-    , library = MaybeExtra.toList libraryUrl
-    , scoring = Just (CodeableConcept.ofOneCoding (scoring "cohort"))
-    , group =
-        [ { code = Nothing
-          , description = Nothing
-          , population =
-                [ { code = Nothing
-                  , description = Nothing
-                  , criteria = Expression.cql
-                  }
-                ]
-          , stratifier = []
-          }
-        ]
-    }
-
-
 scoring : String -> Coding
 scoring code =
     { system = Just "http://terminology.hl7.org/CodeSystem/measure-scoring"
@@ -110,7 +75,7 @@ populationType code =
 newStratifier =
     { code = Nothing
     , description = Nothing
-    , criteria = Just Expression.cql
+    , criteria = Just (Expression.cql Nothing)
     }
 
 

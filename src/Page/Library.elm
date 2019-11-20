@@ -2,31 +2,14 @@ module Page.Library exposing (Model, Msg, init, toSession, update, view)
 
 import Component.Header as Header
 import Fhir.Attachment exposing (Attachment)
-import Fhir.CodeableConcept exposing (CodeableConcept)
 import Fhir.Http as FhirHttp
 import Fhir.Library as Library exposing (Library)
 import Fhir.PrimitiveTypes exposing (Canonical, Id)
 import Html exposing (..)
 import Html.Attributes exposing (class)
 import Http
-import List.Extra exposing (getAt, removeAt, setAt, updateAt)
 import Loading exposing (Status(..))
-import Material.Button exposing (buttonConfig, outlinedButton)
-import Material.Card
-    exposing
-        ( card
-        , cardActionButton
-        , cardActions
-        , cardBlock
-        , cardConfig
-        )
-import Material.LayoutGrid
-    exposing
-        ( layoutGrid
-        , layoutGridCell
-        , layoutGridInner
-        , span12
-        )
+import Material.LayoutGrid exposing (layoutGrid, layoutGridInner)
 import Maybe.Extra as MaybeExtra
 import Page.Library.CqlPanel as CqlPanel
 import Page.Library.Sidebar as Sidebar
@@ -77,8 +60,8 @@ type Msg
     | ClickedHeaderDelete
     | ClickedCqlPanelSave (Maybe Attachment)
     | ClickedSave Library
-    | CompletedLoadLibrary (Result Http.Error Library)
-    | CompletedSaveLibrary (Result Http.Error Library)
+    | CompletedLoadLibrary (Result FhirHttp.Error Library)
+    | CompletedSaveLibrary (Result FhirHttp.Error Library)
     | CompletedDeleteLibrary (Result Http.Error ())
     | HeaderMsg Header.Msg
     | SidebarMsg Sidebar.Msg
@@ -230,19 +213,19 @@ view model =
         Loading ->
             { title = [ "Library" ]
             , content =
-                div [ class "main-content" ] []
+                div [ class "main-content library-page" ] []
             }
 
         LoadingSlowly ->
             { title = [ "Library" ]
             , content =
-                div [ class "main-content" ] []
+                div [ class "main-content library-page" ] []
             }
 
         Failed ->
             { title = [ "Library" ]
             , content =
-                div [ class "main-content" ] []
+                div [ class "main-content library-page" ] []
             }
 
 

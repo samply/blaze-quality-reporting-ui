@@ -15,9 +15,9 @@ import Url.Parser as Parser exposing ((</>), Parser, oneOf, s, string)
 type Route
     = LibraryList
     | Library Id
-    | LibraryByUrl Uri
     | MeasureList
     | Measure Id
+    | MeasureReport Id
 
 
 parser : Parser (Route -> a) a
@@ -25,9 +25,9 @@ parser =
     oneOf
         [ Parser.map LibraryList (s "library")
         , Parser.map Library (s "library" </> string)
-        , Parser.map LibraryByUrl (s "library-by-uri" </> string)
         , Parser.map MeasureList Parser.top
         , Parser.map Measure (s "measure" </> string)
+        , Parser.map MeasureReport (s "measure-report" </> string)
         ]
 
 
@@ -69,13 +69,13 @@ routeToString page =
                 Library id ->
                     [ "library", id ]
 
-                LibraryByUrl uri ->
-                    [ "library-by-uri", uri ]
-
                 MeasureList ->
                     []
 
                 Measure id ->
                     [ "measure", id ]
+
+                MeasureReport id ->
+                    [ "measure-report", id ]
     in
     "#/" ++ String.join "/" pieces

@@ -1,4 +1,4 @@
-module Page.Measure.Sidebar.Library exposing (view)
+module Page.Measure.Sidebar.Library exposing (Model, Msg, init, update, view)
 
 import Component.Sidebar
     exposing
@@ -10,9 +10,75 @@ import Component.Sidebar
         , sidebarEntryContent
         , sidebarEntryTitle
         )
+import Fhir.Bundle exposing (Bundle)
+import Fhir.Http as FhirHttp
+import Fhir.Library as Library exposing (Library)
 import Fhir.PrimitiveTypes exposing (Canonical, Id)
 import Html exposing (Html, a, text)
+import Http
+import Json.Decode exposing (decodeValue)
 import Route exposing (href)
+import Url.Builder as UrlBuilder
+
+
+
+-- MODEL
+
+
+type alias Model =
+    { url : Maybe Canonical
+    , library : Maybe Library
+    }
+
+
+init : String -> Maybe Canonical -> ( Model, Cmd Msg )
+init base url =
+    ( { url = url
+      , library = Nothing
+      }
+    , Maybe.map (searchLibrary base) url |> Maybe.withDefault Cmd.none
+    )
+
+
+
+-- UPDATE
+
+
+type Msg
+    = CompletedSearch (Result Http.Error Bundle)
+
+
+update : Msg -> Model -> Model
+update msg model =
+    case msg of
+        CompletedSearch (Ok bundle) ->
+            case decodeLibraries bundle of
+                firstLibrary :: otherLibraries ->
+                    if List.isEmpty otherLibraries then
+                        { model | library = Just firstLibrary }
+
+                    else
+                        model
+
+                _ ->
+                    model
+
+        CompletedSearch (Err _) ->
+            model
+
+
+searchLibrary base url =
+    FhirHttp.searchType CompletedSearch
+        base
+        "Library"
+        [ UrlBuilder.string "url" url ]
+
+
+decodeLibraries : Bundle -> List Library
+decodeLibraries { entry } =
+    List.filterMap
+        (.resource >> decodeValue Library.decoder >> Result.toMaybe)
+        entry
 
 
 
@@ -23,8 +89,8 @@ type alias Config msg =
     { onEdit : msg }
 
 
-view : Config msg -> List Canonical -> SidebarEntry msg
-view { onEdit } library =
+view : Config msg -> Model -> SidebarEntry msg
+view { onEdit } model =
     sidebarEntry sidebarEntryConfig
         [ sidebarEntryTitle []
             [ text "Library"
@@ -32,13 +98,20 @@ view { onEdit } library =
                 { sidebarEditButtonConfig | onClick = Just onEdit }
             ]
         , sidebarEntryContent []
-            [ libraryLink library ]
+            [ libraryLink model ]
         ]
 
 
-libraryLink : List Canonical -> Html msg
-libraryLink uris =
-    uris
-        |> List.head
-        |> Maybe.map (\uri -> a [ href (Route.LibraryByUrl uri) ] [ text uri ])
-        |> Maybe.withDefault (text "No associated library")
+libraryLink : Model -> Html msg
+libraryLink model =
+    case model.url of
+        Just url ->
+            case Maybe.andThen .id model.library of
+                Just id ->
+                    a [ href (Route.Library id) ] [ text url ]
+
+                Nothing ->
+                    text url
+
+        Nothing ->
+            text "No associated library"

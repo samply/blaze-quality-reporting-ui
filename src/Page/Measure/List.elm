@@ -56,7 +56,7 @@ type Msg
     = ClickedMeasure Measure
     | ClickedCreateMeasure
     | CompletedLoadMeasures (Result Http.Error Bundle)
-    | CompletedCreateMeasure (Result Http.Error Measure)
+    | CompletedCreateMeasure (Result FhirHttp.Error Measure)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -142,9 +142,16 @@ createMeasure base =
                 [ { code = Nothing
                   , description = Nothing
                   , population =
-                        [ { code = Nothing
+                        [ { code =
+                                Just
+                                    (CodeableConcept.ofOneCoding
+                                        (Measure.populationType
+                                            "initial-population"
+                                        )
+                                    )
                           , description = Nothing
-                          , criteria = Expression.cql
+                          , criteria =
+                                Expression.cql (Just "InInitialPopulation")
                           }
                         ]
                   , stratifier = []

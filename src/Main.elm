@@ -9,6 +9,7 @@ import Page.Library as Library
 import Page.Library.List as LibraryList
 import Page.Measure as Measure
 import Page.Measure.List as MeasureList
+import Page.MeasureReport as MeasureReport
 import Page.NotFound as NotFound
 import Route exposing (Route)
 import Session exposing (Session)
@@ -30,6 +31,7 @@ type Page
     | Library Library.Model
     | MeasureList MeasureList.Model
     | Measure Measure.Model
+    | MeasureReport MeasureReport.Model
 
 
 init : Value -> Url -> Nav.Key -> ( Model, Cmd Msg )
@@ -61,6 +63,7 @@ type Msg
     | GotLibraryMsg Library.Msg
     | GotMeasureListMsg MeasureList.Msg
     | GotMeasureMsg Measure.Msg
+    | GotMeasureReportMsg MeasureReport.Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -123,6 +126,10 @@ update msg model =
             Measure.update subMsg measure
                 |> updateWith Measure GotMeasureMsg model
 
+        ( GotMeasureReportMsg subMsg, MeasureReport measureReport ) ->
+            MeasureReport.update subMsg measureReport
+                |> updateWith MeasureReport GotMeasureReportMsg model
+
         ( _, _ ) ->
             -- Disregard messages that arrived for the wrong page.
             ( model, Cmd.none )
@@ -148,6 +155,9 @@ toSession page =
 
         Measure measure ->
             Measure.toSession measure
+
+        MeasureReport measure ->
+            MeasureReport.toSession measure
 
 
 changeRouteTo : Maybe Route -> Model -> ( Model, Cmd Msg )
@@ -176,9 +186,9 @@ changeRouteTo maybeRoute model =
             Measure.init session id
                 |> updateWith Measure GotMeasureMsg model
 
-        Just (Route.LibraryByUrl uri) ->
-            Measure.init session uri
-                |> updateWith Measure GotMeasureMsg model
+        Just (Route.MeasureReport id) ->
+            MeasureReport.init session id
+                |> updateWith MeasureReport GotMeasureReportMsg model
 
 
 toRoute : Page.NavItem -> Route
@@ -264,6 +274,9 @@ view model =
 
         Measure measure ->
             viewPage GotMeasureMsg (Measure.view measure)
+
+        MeasureReport measure ->
+            viewPage GotMeasureReportMsg (MeasureReport.view measure)
 
 
 

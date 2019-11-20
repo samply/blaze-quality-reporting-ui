@@ -55,7 +55,7 @@ type Msg
     = ClickedLibrary Library
     | ClickedCreateLibrary
     | CompletedLoadLibraries (Result Http.Error Bundle)
-    | CompletedCreateLibrary (Result Http.Error Library)
+    | CompletedCreateLibrary (Result FhirHttp.Error Library)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )

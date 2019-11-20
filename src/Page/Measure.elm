@@ -7,7 +7,7 @@ import Fhir.Http as FhirHttp
 import Fhir.Library exposing (Library)
 import Fhir.Measure as Measure exposing (Measure)
 import Fhir.PrimitiveTypes exposing (Canonical, Id)
-import Html exposing (Html, div, h4, text)
+import Html exposing (Html, div, h3, h4, text)
 import Html.Attributes exposing (class)
 import Http
 import List.Extra exposing (getAt, removeAt, setAt, updateAt)
@@ -30,6 +30,7 @@ import Material.LayoutGrid
         )
 import Maybe.Extra as MaybeExtra
 import Page.Measure.AssocLibraryDialog as AssocLibraryDialog
+import Page.Measure.PopulationDialog as PopulationDialog
 import Page.Measure.ReportPanel as ReportPanel
 import Page.Measure.Sidebar.Library as SidebarLibrary
 import Page.Measure.StratifierDialog as StratifierDialog
@@ -43,10 +44,12 @@ import Session exposing (Session)
 
 type alias Model =
     { session : Session
+    , populationDialog : PopulationDialog.Model
     , stratifierDialog : StratifierDialog.Model
     , assocLibraryDialog : AssocLibraryDialog.Model
     , measureId : Id
     , data : Status Data
+    , onPopulationSave : Maybe (Measure.Population -> Msg)
     , onStratifierSave : Maybe (Measure.Stratifier -> Msg)
     }
 
@@ -54,6 +57,7 @@ type alias Model =
 type alias Data =
     { measure : Measure
     , header : Header.Model
+    , sidebarLibrary : SidebarLibrary.Model
     , reportPanel : ReportPanel.Model
     }
 
@@ -61,10 +65,12 @@ type alias Data =
 init : Session -> Id -> ( Model, Cmd Msg )
 init session id =
     ( { session = session
+      , populationDialog = PopulationDialog.init
       , stratifierDialog = StratifierDialog.init
       , assocLibraryDialog = AssocLibraryDialog.init session.base
       , measureId = id
       , data = Loading
+      , onPopulationSave = Nothing
       , onStratifierSave = Nothing
       }
     , loadMeasure session.base id
@@ -83,20 +89,25 @@ toSession model =
 type Msg
     = ClickedHeaderSave (Maybe String) (Maybe String)
     | ClickedHeaderDelete
+    | ClickedPopulationEdit Int Int
     | ClickedStratifierEdit Int Int
     | ClickedStratifierDelete Int Int
     | ClickedAddStratifier Int
     | ClickedLibraryAssoc
     | ClickedSidebarLibraryEdit
+    | ClickedPopulationSaveAtUpdate Int Int Measure.Population
     | ClickedStratifierSaveAtAdd Int Measure.Stratifier
     | ClickedStratifierSaveAtUpdate Int Int Measure.Stratifier
+    | ClickedReport Id
     | SelectedLibrary Library
-    | CompletedLoadMeasure (Result Http.Error Measure)
-    | CompletedSaveMeasure (Result Http.Error Measure)
+    | CompletedLoadMeasure (Result FhirHttp.Error Measure)
+    | CompletedSaveMeasure (Result FhirHttp.Error Measure)
     | CompletedDeleteMeasure (Result Http.Error ())
+    | PopulationDialogMsg PopulationDialog.Msg
     | StratifierDialogMsg StratifierDialog.Msg
     | AssocLibraryDialogMsg AssocLibraryDialog.Msg
     | HeaderMsg Header.Msg
+    | SidebarLibraryMsg SidebarLibrary.Msg
     | ReportPanelMsg ReportPanel.Msg
 
 
@@ -121,6 +132,36 @@ update msg model =
             , deleteMeasure model.session.base model.measureId
             )
 
+        ClickedPopulationEdit groupIdx populationIdx ->
+            ( case model.data of
+                Loaded { measure } ->
+                    let
+                        maybePopulation =
+                            measure.group
+                                |> getAt groupIdx
+                                |> Maybe.map .population
+                                |> Maybe.andThen (getAt populationIdx)
+                    in
+                    case maybePopulation of
+                        Just population ->
+                            updatePopulationDialog
+                                (PopulationDialog.doOpen population)
+                                { model
+                                    | onPopulationSave =
+                                        ClickedPopulationSaveAtUpdate
+                                            groupIdx
+                                            populationIdx
+                                            |> Just
+                                }
+
+                        Nothing ->
+                            model
+
+                _ ->
+                    model
+            , Cmd.none
+            )
+
         ClickedStratifierEdit groupIdx stratifierIdx ->
             ( case model.data of
                 Loaded { measure } ->
@@ -131,7 +172,7 @@ update msg model =
                                 |> Maybe.map .stratifier
                                 |> Maybe.andThen (getAt stratifierIdx)
                     in
-                    case Debug.log "maybeStratifier" maybeStratifier of
+                    case maybeStratifier of
                         Just stratifier ->
                             updateStratifierDialog
                                 (StratifierDialog.doOpen stratifier)
@@ -179,6 +220,18 @@ update msg model =
         ClickedSidebarLibraryEdit ->
             updateAssocLibraryDialog AssocLibraryDialog.doOpen model
 
+        ClickedPopulationSaveAtUpdate groupIdx populationIdx population ->
+            ( model
+            , doWithData
+                (\{ measure } ->
+                    updateGroup (setPopulation populationIdx population)
+                        groupIdx
+                        measure
+                        |> saveMeasure model.session.base model.measureId
+                )
+                model
+            )
+
         ClickedStratifierSaveAtAdd groupIdx stratifier ->
             ( model
             , doWithData
@@ -203,6 +256,12 @@ update msg model =
                 model
             )
 
+        ClickedReport id ->
+            ( model
+            , Route.pushUrl (Session.navKey model.session)
+                (Route.MeasureReport id)
+            )
+
         SelectedLibrary library ->
             ( model
             , doWithData
@@ -218,7 +277,7 @@ update msg model =
                 ( data, cmd ) =
                     loaded model.session.base model.measureId measure
             in
-            ( { model | data = data }, Cmd.map ReportPanelMsg cmd )
+            ( { model | data = data }, cmd )
 
         CompletedLoadMeasure (Err _) ->
             ( { model | data = Failed }
@@ -231,9 +290,10 @@ update msg model =
                     loaded model.session.base model.measureId measure
             in
             ( { model | data = data }
+                |> updatePopulationDialog PopulationDialog.doClose
                 |> updateStratifierDialog StratifierDialog.doClose
                 |> closeAssocLibraryDialog
-            , Cmd.map ReportPanelMsg cmd
+            , cmd
             )
 
         CompletedSaveMeasure (Err _) ->
@@ -246,6 +306,11 @@ update msg model =
 
         CompletedDeleteMeasure (Err _) ->
             ( model, Cmd.none )
+
+        PopulationDialogMsg msg_ ->
+            ( updatePopulationDialog (PopulationDialog.update msg_) model
+            , Cmd.none
+            )
 
         StratifierDialogMsg msg_ ->
             ( updateStratifierDialog (StratifierDialog.update msg_) model
@@ -261,6 +326,18 @@ update msg model =
                     updateData (\data -> { data | header = f data.header })
             in
             ( updateHeader (Header.update msg_) model, Cmd.none )
+
+        SidebarLibraryMsg msg_ ->
+            let
+                updateSidebarLibrary f =
+                    updateData
+                        (\data ->
+                            { data | sidebarLibrary = f data.sidebarLibrary }
+                        )
+            in
+            ( updateSidebarLibrary (SidebarLibrary.update msg_) model
+            , Cmd.none
+            )
 
         ReportPanelMsg msg_ ->
             let
@@ -287,6 +364,11 @@ doWithData f model =
 
         _ ->
             Cmd.none
+
+
+setPopulation : Int -> Measure.Population -> Measure.Group -> Measure.Group
+setPopulation idx population group =
+    { group | population = setAt idx population group.population }
 
 
 addStratifier : Measure.Stratifier -> Measure.Group -> Measure.Group
@@ -331,6 +413,10 @@ updateDataWithCmd f model =
             ( model, Cmd.none )
 
 
+updatePopulationDialog f model =
+    { model | populationDialog = f model.populationDialog }
+
+
 updateStratifierDialog f model =
     { model | stratifierDialog = f model.stratifierDialog }
 
@@ -354,15 +440,22 @@ updateAssocLibraryDialog f model =
 
 loaded base measureId measure =
     let
-        ( reportPanel, cmd ) =
+        ( sidebarLibrary, sidebarLibraryCmd ) =
+            SidebarLibrary.init base (List.head measure.library)
+
+        ( reportPanel, reportPanelCmd ) =
             ReportPanel.init base measureId
     in
     ( Loaded
         { measure = measure
         , header = Header.init measure.title measure.description
+        , sidebarLibrary = sidebarLibrary
         , reportPanel = reportPanel
         }
-    , cmd
+    , Cmd.batch
+        [ sidebarLibraryCmd |> Cmd.map SidebarLibraryMsg
+        , reportPanelCmd |> Cmd.map ReportPanelMsg
+        ]
     )
 
 
@@ -394,18 +487,20 @@ view model =
             { title = [ "Measure" ]
             , content =
                 div [ class "main-content measure-page" ]
-                    [ viewStratifierDialog model
+                    [ viewPopulationDialog model
+                    , viewStratifierDialog model
                     , viewAssocLibraryDialog model
                     , viewMeasure data
-                    , viewSidebar data.measure
+                    , viewSidebar data.sidebarLibrary
                     ]
             }
 
         Loading ->
             { title = [ "Measure" ]
             , content =
-                div [ class "main-content" ]
-                    [ viewStratifierDialog model
+                div [ class "main-content measure-page" ]
+                    [ viewPopulationDialog model
+                    , viewStratifierDialog model
                     , viewAssocLibraryDialog model
                     ]
             }
@@ -413,8 +508,9 @@ view model =
         LoadingSlowly ->
             { title = [ "Measure" ]
             , content =
-                div [ class "main-content" ]
-                    [ viewStratifierDialog model
+                div [ class "main-content measure-page" ]
+                    [ viewPopulationDialog model
+                    , viewStratifierDialog model
                     , viewAssocLibraryDialog model
                     ]
             }
@@ -422,11 +518,21 @@ view model =
         Failed ->
             { title = [ "Measure" ]
             , content =
-                div [ class "main-content" ]
-                    [ viewStratifierDialog model
+                div [ class "main-content measure-page" ]
+                    [ viewPopulationDialog model
+                    , viewStratifierDialog model
                     , viewAssocLibraryDialog model
                     ]
             }
+
+
+viewPopulationDialog : Model -> Html Msg
+viewPopulationDialog model =
+    PopulationDialog.view
+        { onMsg = PopulationDialogMsg
+        , onSave = model.onPopulationSave
+        }
+        model.populationDialog
 
 
 viewStratifierDialog : Model -> Html Msg
@@ -447,14 +553,14 @@ viewAssocLibraryDialog model =
         model.assocLibraryDialog
 
 
-viewSidebar : Measure -> Html Msg
-viewSidebar measure =
+viewSidebar : SidebarLibrary.Model -> Html Msg
+viewSidebar sidebarLibrary =
     let
         config =
             { onEdit = ClickedSidebarLibraryEdit }
     in
     sidebar sidebarConfig
-        [ SidebarLibrary.view config measure.library ]
+        [ SidebarLibrary.view config sidebarLibrary ]
 
 
 viewMeasure : Data -> Html Msg
@@ -462,8 +568,7 @@ viewMeasure { measure, header, reportPanel } =
     layoutGrid [ class "measure" ]
         [ layoutGridInner []
             ([ viewHeader header ]
-                ++ List.indexedMap (\idx group -> viewGroup idx group)
-                    measure.group
+                ++ List.indexedMap viewGroup measure.group
                 ++ [ viewReportPanel measure reportPanel ]
             )
         ]
@@ -479,24 +584,90 @@ viewHeader header =
 
 
 viewGroup : Int -> Measure.Group -> Html Msg
-viewGroup groupIdx { stratifier } =
-    layoutGridCell [ span12 ]
-        [ layoutGridInner [] <|
-            List.indexedMap
-                (\stratifierIdx s ->
-                    layoutGridCell []
-                        [ viewStratifier groupIdx stratifierIdx s ]
-                )
-                stratifier
-                ++ [ layoutGridCell [ span12 ]
-                        [ outlinedButton
-                            { buttonConfig
-                                | onClick = Just (ClickedAddStratifier groupIdx)
-                            }
-                            "add stratifier"
-                        ]
-                   ]
+viewGroup groupIdx { population, stratifier } =
+    layoutGridCell [ span12, class "measure-group" ]
+        [ viewPopulationPanel groupIdx population
+        , viewStratifierPanel groupIdx stratifier
         ]
+
+
+viewPopulationPanel groupIdx populations =
+    layoutGridInner [ class "measure-population-panel" ] <|
+        [ layoutGridCell [ span12 ]
+            [ h3 [ class "mdc-typography--headline5" ] [ text "Populations" ] ]
+        ]
+            ++ List.indexedMap
+                (\idx population ->
+                    layoutGridCell []
+                        [ viewPopulation groupIdx idx population ]
+                )
+                populations
+
+
+viewPopulation : Int -> Int -> Measure.Population -> Html Msg
+viewPopulation groupIdx populationIdx { code, description } =
+    card
+        { cardConfig
+            | outlined = True
+            , additionalAttributes = [ class "measure-population" ]
+        }
+        { blocks =
+            [ cardBlock <|
+                div [ class "measure-population__header" ]
+                    [ h4
+                        [ class "measure-population__title"
+                        , class "mdc-typography--headline6"
+                        ]
+                        [ code
+                            |> Maybe.andThen (.coding >> List.head)
+                            |> Maybe.andThen .code
+                            |> Maybe.withDefault
+                                ("Population " ++ String.fromInt (populationIdx + 1))
+                            |> text
+                        ]
+                    ]
+            , cardBlock <|
+                div [ class "measure-population__description" ]
+                    [ text (Maybe.withDefault "" description) ]
+            ]
+        , actions =
+            Just <|
+                cardActions
+                    { buttons =
+                        [ cardActionButton
+                            { buttonConfig
+                                | onClick =
+                                    ClickedPopulationEdit
+                                        groupIdx
+                                        populationIdx
+                                        |> Just
+                            }
+                            "edit"
+                        ]
+                    , icons = []
+                    }
+        }
+
+
+viewStratifierPanel groupIdx stratifiers =
+    layoutGridInner [ class "measure-stratifier-panel" ] <|
+        [ layoutGridCell [ span12 ]
+            [ h3 [ class "mdc-typography--headline5" ] [ text "Stratifiers" ] ]
+        ]
+            ++ List.indexedMap
+                (\idx stratifier ->
+                    layoutGridCell []
+                        [ viewStratifier groupIdx idx stratifier ]
+                )
+                stratifiers
+            ++ [ layoutGridCell [ span12 ]
+                    [ outlinedButton
+                        { buttonConfig
+                            | onClick = Just (ClickedAddStratifier groupIdx)
+                        }
+                        "add stratifier"
+                    ]
+               ]
 
 
 viewStratifier : Int -> Int -> Measure.Stratifier -> Html Msg
@@ -557,6 +728,7 @@ viewReportPanel measure reportPanel =
         config =
             { ready = not (List.isEmpty measure.library)
             , onLibraryAssoc = ClickedLibraryAssoc
+            , onReportClick = ClickedReport
             , onMsg = ReportPanelMsg
             }
     in

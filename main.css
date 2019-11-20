@@ -64,6 +64,7 @@ body {
   position: fixed;
   background-color: rgb(235, 235, 235);
   width: 256px;
+  box-sizing: border-box;
   top: 64px;
   bottom: 0;
   right: 0;
@@ -93,6 +94,14 @@ body {
   background-color: #fff;
 }
 
+
+/*
+ * Library Page
+ */
+
+.library-page {
+  margin-right: 256px;
+}
 
 /*
  * Library List
@@ -128,6 +137,11 @@ body {
   bottom: 1rem;
 }
 
+
+/*
+ * Measure Page
+ */
+
 .measure-page {
   margin-right: 256px;
 }
@@ -135,6 +149,10 @@ body {
 .measure {
   padding: 24px;
   flex-grow: 1;
+}
+
+.measure-header {
+  color: var(--mdc-theme-text-primary-on-background);
 }
 
 .measure-header__title {
@@ -169,7 +187,51 @@ body {
   margin-right: 1rem;
 }
 
+
+/*
+ * Measure Population Panel
+ */
+
+.measure-population-panel .mdc-typography--headline5 {
+  margin: 0;
+  border-bottom: 1px solid var(--mdc-theme-text-primary-on-background);
+  color: var(--mdc-theme-text-primary-on-background);
+}
+
+/*
+ * Measure Population
+ */
+
+.measure-population {
+  color: var(--mdc-theme-text-primary-on-background);
+}
+
+.measure-population__header {
+  padding: 0 1em;
+}
+
+.measure-population__description {
+  padding: 0 1em;
+}
+
+
+/*
+ * Measure Stratifier Panel
+ */
+
+.measure-stratifier-panel .mdc-typography--headline5 {
+  margin-bottom: 0;
+  border-bottom: 1px solid var(--mdc-theme-text-primary-on-background);
+  color: var(--mdc-theme-text-primary-on-background);
+}
+
+
+/*
+ * Measure Stratifier
+ */
+
 .measure-stratifier {
+  color: var(--mdc-theme-text-primary-on-background);
 }
 
 .measure-stratifier__header {
@@ -181,11 +243,83 @@ body {
 }
 
 .measure-report-panel {
+  color: var(--mdc-theme-text-primary-on-background);
 }
+
+
+/*
+ * Measure Report Panel
+ */
 
 .measure-report-panel__title {
   margin-top: 0;
 }
+
+
+/*
+ * Measure Report Page
+ */
+
+.measure-report-page {
+}
+
+
+/*
+ * Measure Report
+ */
+
+.measure-report {
+  padding: 1.5rem;
+}
+
+
+/*
+ * Measure Report Population Panel
+ */
+
+.measure-report-population-panel .mdc-typography--headline5 {
+  margin: 0;
+  border-bottom: 1px solid var(--mdc-theme-text-primary-on-background);
+  color: var(--mdc-theme-text-primary-on-background);
+}
+
+
+/*
+ * Measure Population
+ */
+
+.measure-report-population {
+  color: var(--mdc-theme-text-primary-on-background);
+}
+
+.measure-report-population__header {
+  padding: 0 1em;
+}
+
+.measure-report-population__count {
+  padding: 0 1em;
+}
+
+
+/*
+ * Measure Report Stratifier Panel
+ */
+
+.measure-report-stratifier-panel .mdc-typography--headline5 {
+  margin: 0;
+  border-bottom: 1px solid var(--mdc-theme-text-primary-on-background);
+  color: var(--mdc-theme-text-primary-on-background);
+}
+
+
+/*
+ * Measure Stratifier
+ */
+
+.measure-report-stratifier {
+  color: var(--mdc-theme-text-primary-on-background);
+}
+
 
 .mdc-dialog .mdc-dialog__content {
   display: flex;
@@ -199,6 +333,7 @@ body {
 }
 
 .cql-panel {
+  color: var(--mdc-theme-text-primary-on-background);
 }
 
 .cql-panel__title {

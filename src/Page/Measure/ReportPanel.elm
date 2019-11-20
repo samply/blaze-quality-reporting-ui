@@ -1,15 +1,17 @@
 module Page.Measure.ReportPanel exposing (Model, Msg, init, update, view)
 
 import Fhir.Bundle exposing (Bundle)
-import Fhir.Http as FhirHttp
+import Fhir.Http as FhirHttp exposing (Error(..))
 import Fhir.MeasureReport as MeasureReport exposing (MeasureReport, Status(..))
+import Fhir.OperationOutcome as OperationOutcome exposing (Issue)
 import Fhir.PrimitiveTypes exposing (Id)
-import Html exposing (Html, div, h3, text)
+import Html exposing (Html, div, h3, h4, h5, li, p, text, ul)
 import Html.Attributes exposing (class)
 import Http
 import Json.Decode exposing (decodeValue)
 import Loading
 import Material.Button exposing (buttonConfig, outlinedButton, textButton)
+import Material.Dialog exposing (dialog, dialogConfig)
 import Material.Icon exposing (icon, iconConfig)
 import Material.LayoutGrid exposing (layoutGridCell, span12)
 import Material.List
@@ -17,16 +19,11 @@ import Material.List
         ( ListItem
         , list
         , listConfig
-        , listGroup
-        , listGroupSubheader
         , listItem
         , listItemConfig
         , listItemGraphic
-        , listItemMeta
-        , listItemPrimaryText
-        , listItemSecondaryText
-        , listItemText
         )
+import Maybe.Extra as MaybeExtra
 import Url.Builder as UrlBuilder
 
 
@@ -38,6 +35,7 @@ type alias Model =
     { base : String
     , measureId : Id
     , reports : Loading.Status (List MeasureReport)
+    , error : Maybe FhirHttp.Error
     }
 
 
@@ -46,6 +44,7 @@ init base measureId =
     ( { base = base
       , measureId = measureId
       , reports = Loading.Loading
+      , error = Nothing
       }
     , loadReports base measureId
     )
@@ -57,8 +56,9 @@ init base measureId =
 
 type Msg
     = ClickedGenerate
+    | ClickedErrorDialogClose
     | CompletedLoadReports (Result Http.Error Bundle)
-    | CompletedGenerateReport (Result Http.Error MeasureReport)
+    | CompletedGenerateReport (Result FhirHttp.Error MeasureReport)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -66,8 +66,19 @@ update msg model =
     case msg of
         ClickedGenerate ->
             ( model
-            , generateReport model.base model.measureId
+            , FhirHttp.postOperationInstance CompletedGenerateReport
+                model.base
+                "Measure"
+                model.measureId
+                "$evaluate-measure"
+                [ UrlBuilder.string "periodStart" "1900"
+                , UrlBuilder.string "periodEnd" "2100"
+                ]
+                MeasureReport.decoder
             )
+
+        ClickedErrorDialogClose ->
+            ( { model | error = Nothing }, Cmd.none )
 
         CompletedLoadReports (Ok bundle) ->
             ( { model | reports = Loading.Loaded (decodeReports bundle) }
@@ -84,8 +95,8 @@ update msg model =
             , Cmd.none
             )
 
-        CompletedGenerateReport (Err _) ->
-            ( { model | reports = Loading.Failed }
+        CompletedGenerateReport (Err error) ->
+            ( { model | error = Just error }
             , Cmd.none
             )
 
@@ -103,19 +114,6 @@ addReport report model =
 
         Loading.Failed ->
             model
-
-
-generateReport base measureId =
-    Http.post
-        { url =
-            UrlBuilder.crossOrigin base
-                [ "Measure", measureId, "$evaluate-measure" ]
-                [ UrlBuilder.string "periodStart" "1900"
-                , UrlBuilder.string "periodEnd" "2100"
-                ]
-        , body = Http.emptyBody
-        , expect = Http.expectJson CompletedGenerateReport MeasureReport.decoder
-        }
 
 
 loadReports base measureId =
@@ -139,6 +137,7 @@ decodeReports { entry } =
 type alias Config msg =
     { ready : Bool
     , onLibraryAssoc : msg
+    , onReportClick : Id -> msg
     , onMsg : Msg -> msg
     }
 
@@ -146,7 +145,8 @@ type alias Config msg =
 view : Config msg -> Model -> Html msg
 view config model =
     layoutGridCell [ span12, class "measure-report-panel" ]
-        [ h3
+        [ viewErrorDialog model.error |> Html.map config.onMsg
+        , h3
             [ class "measure-report-panel__title"
             , class "mdc-typography--headline5"
             ]
@@ -157,7 +157,10 @@ view config model =
                     emptyListPlaceholder config
 
                 else
-                    viewReportList reports
+                    div []
+                        [ viewReportList config.onReportClick reports
+                        , generateButton config.onMsg "Generate Another Report"
+                        ]
 
             Loading.Loading ->
                 text ""
@@ -173,9 +176,7 @@ view config model =
 emptyListPlaceholder { ready, onLibraryAssoc, onMsg } =
     div [ class "measure-report-panel__empty-placeholder" ] <|
         if ready then
-            [ outlinedButton
-                { buttonConfig | onClick = Just (onMsg ClickedGenerate) }
-                "Generate First Report"
+            [ generateButton onMsg "Generate First Report"
             ]
 
         else
@@ -187,13 +188,23 @@ emptyListPlaceholder { ready, onLibraryAssoc, onMsg } =
             ]
 
 
-viewReportList reports =
+generateButton onMsg label =
+    outlinedButton
+        { buttonConfig | onClick = Just (onMsg ClickedGenerate) }
+        label
+
+
+viewReportList onReportClick reports =
     list listConfig <|
-        List.map viewReport reports
+        List.map (viewReport onReportClick) reports
 
 
-viewReport { status, date } =
-    listItem listItemConfig
+viewReport onReportClick ({ status, date } as report) =
+    listItem
+        { listItemConfig
+            | onClick = Maybe.map (\id -> onReportClick id) report.id
+            , disabled = MaybeExtra.isNothing report.id
+        }
         [ listItemGraphic [] [ statusIcon status ]
         , text (Maybe.withDefault "<unknown-date>" date)
         ]
@@ -211,3 +222,69 @@ statusIcon status =
             Error ->
                 "error_outline"
         )
+
+
+viewErrorDialog error =
+    dialog
+        { dialogConfig
+            | open = MaybeExtra.isJust error
+            , onClose = Just ClickedErrorDialogClose
+        }
+        { title = Just "Error"
+        , content = error |> Maybe.map errorDialogContent |> Maybe.withDefault []
+        , actions =
+            [ textButton
+                { buttonConfig
+                    | onClick = Just ClickedErrorDialogClose
+                }
+                "Ok"
+            ]
+        }
+
+
+errorDialogContent : FhirHttp.Error -> List (Html Msg)
+errorDialogContent error =
+    case error of
+        BadUrl url ->
+            [ text ("Bad URL " ++ url) ]
+
+        Timeout ->
+            [ text "Timeout. Please try again." ]
+
+        NetworkError ->
+            [ text "Network Error. Please try again." ]
+
+        BadStatus _ operationOutcome ->
+            List.map
+                (\issue ->
+                    div []
+                        [ h4 [ class "mdc-typography--headline6" ]
+                            [ text (issueTitle issue.code) ]
+                        , p [] [ text (Maybe.withDefault "" issue.diagnostics) ]
+                        , h5 [ class "mdc-typography--subtitle1" ]
+                            [ text "Location:" ]
+                        , ul [] <|
+                            List.map
+                                (\expression -> li [] [ text expression ])
+                                issue.expression
+                        ]
+                )
+                operationOutcome.issue
+
+        BadBody s ->
+            [ text ("Invalid response from the FHIR server: " ++ s) ]
+
+
+issueTitle issueType =
+    case issueType of
+        OperationOutcome.Required ->
+            "Missing required element"
+
+        OperationOutcome.Value ->
+            "Invalid element or header"
+
+        OperationOutcome.Exception ->
+            "Unexpected internal error"
+
+        _ ->
+            Debug.toString issueType

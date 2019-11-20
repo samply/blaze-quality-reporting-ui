@@ -1,4 +1,13 @@
-module Fhir.Http exposing (..)
+module Fhir.Http exposing
+    ( Error(..)
+    , create
+    , delete
+    , postBundle
+    , postOperationInstance
+    , read
+    , searchType
+    , update
+    )
 
 {-| FHIR RESTful API interactions.
 
@@ -10,15 +19,24 @@ module Fhir.Http exposing (..)
 -}
 
 import Fhir.Bundle as Bundle exposing (Bundle)
+import Fhir.OperationOutcome as OperationOutcome exposing (OperationOutcome)
 import Fhir.PrimitiveTypes exposing (Id)
 import Http
-import Json.Decode exposing (Decoder)
+import Json.Decode as Decoder exposing (Decoder)
 import Json.Encode exposing (Value)
 import Url.Builder as UrlBuilder exposing (QueryParameter)
 
 
+type Error
+    = BadUrl String
+    | Timeout
+    | NetworkError
+    | BadStatus Int OperationOutcome
+    | BadBody String
+
+
 read :
-    (Result Http.Error resource -> msg)
+    (Result Error resource -> msg)
     -> String
     -> String
     -> Id
@@ -27,7 +45,7 @@ read :
 read toMsg base type_ id decoder =
     Http.get
         { url = UrlBuilder.crossOrigin base [ type_, id ] []
-        , expect = Http.expectJson toMsg decoder
+        , expect = expectJson toMsg decoder
         }
 
 
@@ -56,7 +74,7 @@ postBundle toMsg base bundle =
 {-| Creates a resource.
 -}
 create :
-    (Result Http.Error resource -> msg)
+    (Result Error resource -> msg)
     -> String
     -> String
     -> Decoder resource
@@ -66,12 +84,12 @@ create toMsg base type_ decoder resource =
     Http.post
         { url = UrlBuilder.crossOrigin base [ type_ ] []
         , body = Http.jsonBody resource
-        , expect = Http.expectJson toMsg decoder
+        , expect = expectJson toMsg decoder
         }
 
 
 update :
-    (Result Http.Error resource -> msg)
+    (Result Error resource -> msg)
     -> String
     -> String
     -> String
@@ -84,7 +102,7 @@ update toMsg base type_ id decoder resource =
         , headers = []
         , url = UrlBuilder.crossOrigin base [ type_, id ] []
         , body = Http.jsonBody resource
-        , expect = Http.expectJson toMsg decoder
+        , expect = expectJson toMsg decoder
         , timeout = Nothing
         , tracker = Nothing
         }
@@ -106,3 +124,54 @@ delete toMsg base type_ id =
         , timeout = Nothing
         , tracker = Nothing
         }
+
+
+postOperationInstance :
+    (Result Error a -> msg)
+    -> String
+    -> String
+    -> Id
+    -> String
+    -> List QueryParameter
+    -> Decoder a
+    -> Cmd msg
+postOperationInstance toMsg base type_ id name params decoder =
+    Http.post
+        { url =
+            UrlBuilder.crossOrigin base
+                [ type_, id, name ]
+                params
+        , body = Http.emptyBody
+        , expect = expectJson toMsg decoder
+        }
+
+
+expectJson : (Result Error a -> msg) -> Decoder a -> Http.Expect msg
+expectJson toMsg decoder =
+    Http.expectStringResponse toMsg <|
+        \response ->
+            case response of
+                Http.BadUrl_ url ->
+                    Err (BadUrl url)
+
+                Http.Timeout_ ->
+                    Err Timeout
+
+                Http.NetworkError_ ->
+                    Err NetworkError
+
+                Http.BadStatus_ metadata body ->
+                    case Decoder.decodeString OperationOutcome.decoder body of
+                        Ok operationOutcome ->
+                            Err (BadStatus metadata.statusCode operationOutcome)
+
+                        Err err ->
+                            Err (BadBody (Decoder.errorToString err))
+
+                Http.GoodStatus_ _ body ->
+                    case Decoder.decodeString decoder body of
+                        Ok value ->
+                            Ok value
+
+                        Err err ->
+                            Err (BadBody (Decoder.errorToString err))

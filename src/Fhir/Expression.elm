@@ -13,10 +13,10 @@ type alias Expression =
     }
 
 
-cql : Expression
-cql =
+cql : Maybe String -> Expression
+cql expression =
     { language = "text/cql"
-    , expression = Nothing
+    , expression = expression
     }
 
 
