@@ -6,7 +6,6 @@ import Fhir.Http as FhirHttp
 import Fhir.Library as Library exposing (Library)
 import Html exposing (Html, div, text)
 import Html.Attributes exposing (class)
-import Http
 import Json.Decode exposing (decodeValue)
 import Material.Button exposing (buttonConfig, textButton)
 import Material.Fab exposing (fab, fabConfig)
@@ -54,7 +53,7 @@ toSession model =
 type Msg
     = ClickedLibrary Library
     | ClickedCreateLibrary
-    | CompletedLoadLibraries (Result Http.Error Bundle)
+    | CompletedLoadLibraries (Result FhirHttp.Error Bundle)
     | CompletedCreateLibrary (Result FhirHttp.Error Library)
 
 

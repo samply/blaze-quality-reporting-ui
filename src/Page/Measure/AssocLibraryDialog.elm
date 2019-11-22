@@ -13,7 +13,6 @@ import Fhir.Http as FhirHttp
 import Fhir.Library as Library exposing (Library)
 import Html exposing (Html, text)
 import Html.Attributes exposing (class)
-import Http as Http
 import Json.Decode exposing (decodeValue)
 import Material.Dialog exposing (dialog, dialogConfig)
 import Material.Icon exposing (icon, iconConfig)
@@ -52,7 +51,7 @@ type Msg
     = ClickedClose
     | EnteredSearch String
     | MaybePerformSearch String
-    | CompletedLoad (Result Http.Error Bundle)
+    | CompletedLoad (Result FhirHttp.Error Bundle)
 
 
 doOpen : Model -> ( Model, Cmd Msg )

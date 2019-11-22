@@ -107,8 +107,8 @@ update msg model =
         CompletedLoadLibrary (Ok library) ->
             ( { model | data = loaded library }, Cmd.none )
 
-        CompletedLoadLibrary (Err _) ->
-            ( { model | data = Failed }
+        CompletedLoadLibrary (Err error) ->
+            ( { model | data = Failed error }
             , Cmd.none
             )
 
@@ -222,10 +222,11 @@ view model =
                 div [ class "main-content library-page" ] []
             }
 
-        Failed ->
+        Failed error ->
             { title = [ "Library" ]
             , content =
-                div [ class "main-content library-page" ] []
+                div [ class "main-content library-page library-page--error" ]
+                    [ viewError error ]
             }
 
 
@@ -254,3 +255,25 @@ viewCqlPanel cqlPanel =
         , onMsg = CqlPanelMsg
         }
         cqlPanel
+
+
+viewError : FhirHttp.Error -> Html Msg
+viewError error =
+    case error of
+        FhirHttp.BadStatus status _ ->
+            case status of
+                404 ->
+                    div [ class "error" ]
+                        [ div [ class "error__big-http-status" ]
+                            [ text "404" ]
+                        , div [ class "error__big-http-status-message" ]
+                            [ text "Not Found" ]
+                        ]
+
+                _ ->
+                    div [ class "error" ]
+                        [ text "Other Error" ]
+
+        _ ->
+            div [ class "error" ]
+                [ text "Other Error" ]

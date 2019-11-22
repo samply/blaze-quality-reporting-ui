@@ -15,7 +15,6 @@ import Fhir.Http as FhirHttp
 import Fhir.Library as Library exposing (Library)
 import Fhir.PrimitiveTypes exposing (Canonical, Id)
 import Html exposing (Html, a, text)
-import Http
 import Json.Decode exposing (decodeValue)
 import Route exposing (href)
 import Url.Builder as UrlBuilder
@@ -45,7 +44,7 @@ init base url =
 
 
 type Msg
-    = CompletedSearch (Result Http.Error Bundle)
+    = CompletedSearch (Result FhirHttp.Error Bundle)
 
 
 update : Msg -> Model -> Model
@@ -108,10 +107,23 @@ libraryLink model =
         Just url ->
             case Maybe.andThen .id model.library of
                 Just id ->
-                    a [ href (Route.Library id) ] [ text url ]
+                    a [ href (Route.Library id) ]
+                        [ model.library
+                            |> Maybe.andThen libraryTitle
+                            |> Maybe.withDefault url
+                            |> text
+                        ]
 
                 Nothing ->
-                    text url
+                    model.library
+                        |> Maybe.andThen libraryTitle
+                        |> Maybe.withDefault url
+                        |> text
 
         Nothing ->
             text "No associated library"
+
+
+libraryTitle { title, name, id } =
+    List.filterMap identity [ title, name, id ]
+        |> List.head

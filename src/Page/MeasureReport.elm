@@ -4,7 +4,7 @@ import Fhir.CodeableConcept exposing (CodeableConcept)
 import Fhir.Http as FhirHttp
 import Fhir.MeasureReport as MeasureReport exposing (MeasureReport)
 import Fhir.PrimitiveTypes exposing (Id)
-import Html exposing (Html, div, h3, h4, p, text)
+import Html exposing (Html, div, h3, p, table, tbody, td, text, th, thead, tr)
 import Html.Attributes exposing (class)
 import Loading exposing (Status(..))
 import Material.Card
@@ -57,8 +57,8 @@ update msg model =
         CompletedLoadReport (Ok report) ->
             ( { model | report = Loaded report }, Cmd.none )
 
-        CompletedLoadReport (Err _) ->
-            ( { model | report = Failed }, Cmd.none )
+        CompletedLoadReport (Err error) ->
+            ( { model | report = Failed error }, Cmd.none )
 
 
 loadReport base id =
@@ -151,8 +151,27 @@ viewStratifierPanel groupIdx stratifiers =
 viewStratifier : Int -> Int -> MeasureReport.Stratifier -> Html Msg
 viewStratifier groupIdx stratifierIdx { code, stratum } =
     div [ class "measure-report-stratifier" ]
-        [ h3 [ class "mdc-typography--headline6" ]
-            [ text (stratifierTitle stratifierIdx code) ]
+        [ div [ class "measure-report-stratifier__title" ]
+            [ h3 [ class "mdc-typography--headline6" ]
+                [ text (stratifierTitle stratifierIdx code) ]
+            ]
+        , div [ class "mdc-data-table" ]
+            [ table [ class "mdc-data-table__table" ]
+                [ thead []
+                    [ tr [ class "mdc-data-table__header-row" ]
+                        [ th [ class "mdc-data-table__header-cell" ]
+                            [ text "Value" ]
+                        , th
+                            [ class "mdc-data-table__header-cell"
+                            , class "mdc-data-table__header-cell--numeric"
+                            ]
+                            [ text "Count" ]
+                        ]
+                    ]
+                , tbody [ class "mdc-data-table_content" ]
+                    (List.map viewStratum stratum)
+                ]
+            ]
         ]
 
 
@@ -165,8 +184,51 @@ stratifierTitle stratifierIdx code =
             ("Stratifier " ++ String.fromInt (stratifierIdx + 1))
 
 
+viewStratum : MeasureReport.Stratum -> Html Msg
+viewStratum stratum =
+    let
+        value =
+            stratum.value
+                |> Maybe.andThen .text
+                |> Maybe.withDefault "<unknown>"
+
+        countCell population =
+            td
+                [ class "mdc-data-table__cell"
+                , class "mdc-data-table__cell--numeric"
+                ]
+                [ population.count |> countToString |> text ]
+    in
+    tr [ class "mdc-data-table__row" ]
+        (td [ class "mdc-data-table__cell" ] [ text value ]
+            :: List.map countCell stratum.population
+        )
+
+
 countToString : Maybe Int -> String
 countToString count =
     count
         |> Maybe.map String.fromInt
         |> Maybe.withDefault "<unknown>"
+
+
+viewError : FhirHttp.Error -> Html Msg
+viewError error =
+    case error of
+        FhirHttp.BadStatus status _ ->
+            case status of
+                404 ->
+                    div [ class "error" ]
+                        [ div [ class "error__big-http-status" ]
+                            [ text "404" ]
+                        , div [ class "error__big-http-status-message" ]
+                            [ text "Not Found" ]
+                        ]
+
+                _ ->
+                    div [ class "error" ]
+                        [ text "Other Error" ]
+
+        _ ->
+            div [ class "error" ]
+                [ text "Other Error" ]

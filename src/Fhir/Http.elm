@@ -50,7 +50,7 @@ read toMsg base type_ id decoder =
 
 
 searchType :
-    (Result Http.Error Bundle -> msg)
+    (Result Error Bundle -> msg)
     -> String
     -> String
     -> List QueryParameter
@@ -58,16 +58,16 @@ searchType :
 searchType toMsg base type_ params =
     Http.get
         { url = UrlBuilder.crossOrigin base [ type_ ] params
-        , expect = Http.expectJson toMsg Bundle.decoder
+        , expect = expectJson toMsg Bundle.decoder
         }
 
 
-postBundle : (Result Http.Error Bundle -> msg) -> String -> Value -> Cmd msg
+postBundle : (Result Error Bundle -> msg) -> String -> Value -> Cmd msg
 postBundle toMsg base bundle =
     Http.post
         { url = base
         , body = Http.jsonBody bundle
-        , expect = Http.expectJson toMsg Bundle.decoder
+        , expect = expectJson toMsg Bundle.decoder
         }
 
 

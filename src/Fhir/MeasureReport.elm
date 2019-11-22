@@ -4,6 +4,7 @@ module Fhir.MeasureReport exposing
     , Population
     , Status(..)
     , Stratifier
+    , Stratum
     , Type(..)
     , decoder
     )

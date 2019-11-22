@@ -7,7 +7,6 @@ import Fhir.Http as FhirHttp
 import Fhir.Measure as Measure exposing (Measure)
 import Html exposing (Html, div, text)
 import Html.Attributes exposing (class)
-import Http
 import Json.Decode exposing (decodeValue)
 import Material.Button exposing (buttonConfig, textButton)
 import Material.Fab exposing (fab, fabConfig)
@@ -55,7 +54,7 @@ toSession model =
 type Msg
     = ClickedMeasure Measure
     | ClickedCreateMeasure
-    | CompletedLoadMeasures (Result Http.Error Bundle)
+    | CompletedLoadMeasures (Result FhirHttp.Error Bundle)
     | CompletedCreateMeasure (Result FhirHttp.Error Measure)
 
 

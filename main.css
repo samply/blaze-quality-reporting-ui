@@ -103,6 +103,11 @@ body {
   margin-right: 256px;
 }
 
+.library-page.library-page--error {
+  margin-right: 0;
+}
+
+
 /*
  * Library List
  */
@@ -144,6 +149,10 @@ body {
 
 .measure-page {
   margin-right: 256px;
+}
+
+.measure-page.measure-page--error {
+  margin-right: 0;
 }
 
 .measure {
@@ -320,6 +329,10 @@ body {
   color: var(--mdc-theme-text-primary-on-background);
 }
 
+.measure-report-stratifier__title h3 {
+  margin: 1.5rem 1rem 0.5rem;
+}
+
 
 .mdc-dialog .mdc-dialog__content {
   display: flex;
@@ -373,3 +386,28 @@ body {
 }
 
 
+/*
+ * Error
+ */
+
+.error {
+  padding: 1.5rem
+}
+
+.error__big-http-status {
+  font-family: Roboto,sans-serif;
+  font-size: 6rem;
+  line-height: 6rem;
+  font-weight: 100;
+  letter-spacing: -0.015625em;
+  text-align: center;
+  padding: 3rem 0 0;
+}
+
+.error__big-http-status-message {
+  font-family: Roboto,sans-serif;
+  font-size: 2rem;
+  line-height: 2rem;
+  font-weight: 300;
+  text-align: center;
+}

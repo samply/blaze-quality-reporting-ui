@@ -7,7 +7,6 @@ import Fhir.OperationOutcome as OperationOutcome exposing (Issue)
 import Fhir.PrimitiveTypes exposing (Id)
 import Html exposing (Html, div, h3, h4, h5, li, p, text, ul)
 import Html.Attributes exposing (class)
-import Http
 import Json.Decode exposing (decodeValue)
 import Loading
 import Material.Button exposing (buttonConfig, outlinedButton, textButton)
@@ -57,7 +56,7 @@ init base measureId =
 type Msg
     = ClickedGenerate
     | ClickedErrorDialogClose
-    | CompletedLoadReports (Result Http.Error Bundle)
+    | CompletedLoadReports (Result FhirHttp.Error Bundle)
     | CompletedGenerateReport (Result FhirHttp.Error MeasureReport)
 
 
@@ -85,8 +84,8 @@ update msg model =
             , Cmd.none
             )
 
-        CompletedLoadReports (Err _) ->
-            ( { model | reports = Loading.Failed }
+        CompletedLoadReports (Err error) ->
+            ( { model | reports = Loading.Failed error }
             , Cmd.none
             )
 
@@ -112,7 +111,7 @@ addReport report model =
         Loading.LoadingSlowly ->
             model
 
-        Loading.Failed ->
+        Loading.Failed _ ->
             model
 
 
@@ -168,7 +167,7 @@ view config model =
             Loading.LoadingSlowly ->
                 text ""
 
-            Loading.Failed ->
+            Loading.Failed _ ->
                 text "error"
         ]
 
