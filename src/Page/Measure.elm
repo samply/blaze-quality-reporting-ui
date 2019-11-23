@@ -739,7 +739,7 @@ viewReportPanel measure reportPanel =
 
 viewError : FhirHttp.Error -> Html Msg
 viewError error =
-    case Debug.log "error" error of
+    case error of
         FhirHttp.BadStatus status _ ->
             case status of
                 404 ->

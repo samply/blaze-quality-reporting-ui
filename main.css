@@ -86,7 +86,6 @@ body {
 
 .sidebar-entry__content {
   display: flex;
-  flex-direction: column;
   color: #4a5566;
 }
 
@@ -94,6 +93,9 @@ body {
   flex-grow: 1;
   margin: 0.5rem 0;
   background-color: #fff;
+}
+
+.sidebar-entry__action-buttons {
 }
 
 

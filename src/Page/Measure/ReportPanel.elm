@@ -290,4 +290,4 @@ issueTitle issueType =
             "Unexpected internal error"
 
         _ ->
-            Debug.toString issueType
+            "Other error"

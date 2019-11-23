@@ -1,4 +1,4 @@
-# Blaze CDS
+# Blaze Quality Reporting UI
 
 ## Development
 

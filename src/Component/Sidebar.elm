@@ -6,7 +6,7 @@ import Material.Button exposing (buttonConfig, textButton)
 
 
 type alias SidebarConfig msg =
-    { additionalAttributes : List (Html.Attribute msg) }
+    { additionalAttributes : List (Attribute msg) }
 
 
 sidebarConfig : SidebarConfig msg
@@ -35,7 +35,7 @@ type SidebarEntry msg
 
 
 type alias SidebarEntryConfig msg =
-    { additionalAttributes : List (Html.Attribute msg) }
+    { additionalAttributes : List (Attribute msg) }
 
 
 sidebarEntryConfig : SidebarEntryConfig msg
@@ -55,7 +55,7 @@ sidebarEntry config nodes =
 
 sidebarEntryTitle : List (Attribute msg) -> List (Html msg) -> Html msg
 sidebarEntryTitle additionalAttributes nodes =
-    Html.div
+    div
         (class "sidebar-entry__title mdc-typography--subtitle1"
             :: additionalAttributes
         )
@@ -64,7 +64,7 @@ sidebarEntryTitle additionalAttributes nodes =
 
 sidebarEntryContent : List (Attribute msg) -> List (Html msg) -> Html msg
 sidebarEntryContent additionalAttributes nodes =
-    Html.div
+    div
         (class "sidebar-entry__content mdc-typography--body2"
             :: additionalAttributes
         )
@@ -73,7 +73,7 @@ sidebarEntryContent additionalAttributes nodes =
 
 type alias SidebarEditButtonConfig msg =
     { onClick : Maybe msg
-    , additionalAttributes : List (Html.Attribute msg)
+    , additionalAttributes : List (Attribute msg)
     }
 
 
@@ -92,3 +92,12 @@ sidebarEditButton config =
             , additionalAttributes = config.additionalAttributes
         }
         "edit"
+
+
+sidebarEntryActionButtons : List (Attribute msg) -> List (Html msg) -> Html msg
+sidebarEntryActionButtons additionalAttributes nodes =
+    div
+        (class "sidebar-entry__action-buttons"
+            :: additionalAttributes
+        )
+        nodes

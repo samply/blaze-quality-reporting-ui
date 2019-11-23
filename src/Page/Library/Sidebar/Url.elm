@@ -6,13 +6,15 @@ import Component.Sidebar
         , sidebarEditButton
         , sidebarEditButtonConfig
         , sidebarEntry
+        , sidebarEntryActionButtons
         , sidebarEntryConfig
         , sidebarEntryContent
         , sidebarEntryTitle
         )
 import Fhir.PrimitiveTypes exposing (Uri)
 import Html exposing (Html, text)
-import Material.Button exposing (buttonConfig, unelevatedButton)
+import Html.Attributes exposing (style)
+import Material.Button exposing (buttonConfig, outlinedButton, unelevatedButton)
 import Material.TextField exposing (textField, textFieldConfig)
 
 
@@ -39,6 +41,7 @@ init url =
 
 type Msg
     = ClickedEdit
+    | ClickedCancel
     | EnteredUrl String
 
 
@@ -47,6 +50,9 @@ update msg model =
     case msg of
         ClickedEdit ->
             { model | edit = True }
+
+        ClickedCancel ->
+            { model | edit = False }
 
         EnteredUrl s ->
             { model | url = Just s }
@@ -78,11 +84,23 @@ view { onMsg, onSave } { url, edit } =
                         , onInput = Just (EnteredUrl >> onMsg)
                         , outlined = True
                     }
-                , unelevatedButton
-                    { buttonConfig | onClick = Just (onSave url) }
-                    "save"
                 ]
 
             else
                 [ url |> Maybe.withDefault "<not-specified>" |> text ]
+        , sidebarEntryActionButtons [] <|
+            if edit then
+                [ unelevatedButton
+                    { buttonConfig | onClick = Just (onSave url) }
+                    "save"
+                , outlinedButton
+                    { buttonConfig
+                        | onClick = Just (onMsg ClickedCancel)
+                        , additionalAttributes = [ style "margin-left" "0.5rem" ]
+                    }
+                    "cancel"
+                ]
+
+            else
+                []
         ]

@@ -92,13 +92,6 @@ drawer config =
                     [ listItemGraphic [] [ icon iconConfig "help" ]
                     , text "Measures"
                     ]
-                , listItem
-                    { listItemConfig
-                        | onClick = Just (config.onNavItemClick Measures)
-                    }
-                    [ listItemGraphic [] [ icon iconConfig "info" ]
-                    , text "Measure Reports"
-                    ]
                 , listItemDivider listItemDividerConfig
                 , listItem
                     { listItemConfig

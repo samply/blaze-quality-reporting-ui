@@ -49,7 +49,6 @@ init flagsValue url navKey =
     let
         flags =
             decodeValue (flagsDecoder navKey) flagsValue
-                |> Debug.log "flags"
                 |> Result.withDefault (defaultFlags navKey)
     in
     changeRouteTo (Route.fromUrl url)
@@ -64,7 +63,6 @@ flagsDecoder navKey =
         sessionDecoder =
             Decode.string
                 |> Decode.map (decodeString (Session.decoder navKey))
-                |> Decode.map (Debug.log "session")
                 |> Decode.map (Result.withDefault (Session.default navKey))
     in
     succeed Flags

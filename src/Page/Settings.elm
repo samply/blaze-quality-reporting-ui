@@ -275,7 +275,7 @@ serverListCard servers =
 serverList : Zipper Server -> Html Msg
 serverList servers =
     list listConfig <|
-        List.map serverListItem (Debug.log "servers" (toMarkedList servers))
+        List.map serverListItem (toMarkedList servers)
 
 
 toMarkedList : Zipper a -> List ( Bool, a )

@@ -7,7 +7,7 @@ import Html.Attributes exposing (class)
 
 view : FhirHttp.Error -> Html msg
 view error =
-    case Debug.log "error" error of
+    case error of
         FhirHttp.NetworkError ->
             div [ class "error" ]
                 [ div [ class "error__big-http-status" ]
