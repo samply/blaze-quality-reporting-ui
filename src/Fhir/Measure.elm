@@ -18,7 +18,6 @@ import Fhir.PrimitiveTypes exposing (Canonical, Id, Markdown, Uri)
 import Json.Decode exposing (Decoder, list, maybe, string, succeed)
 import Json.Decode.Pipeline exposing (optional, required)
 import Json.Encode as Encode exposing (Value)
-import Maybe.Extra as MaybeExtra
 
 
 type alias Measure =

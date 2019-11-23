@@ -7,15 +7,8 @@ import Fhir.PrimitiveTypes exposing (Id)
 import Html exposing (Html, div, h3, p, table, tbody, td, text, th, thead, tr)
 import Html.Attributes exposing (class)
 import Loading exposing (Status(..))
-import Material.Card
-    exposing
-        ( card
-        , cardActionButton
-        , cardActions
-        , cardBlock
-        , cardConfig
-        )
 import Material.List exposing (ListItem, list, listConfig, listItem, listItemConfig)
+import NaturalOrdering
 import Session exposing (Session)
 
 
@@ -34,7 +27,7 @@ init session id =
     ( { session = session
       , report = Loading
       }
-    , loadReport session.base id
+    , loadReport (Session.getBase session) id
     )
 
 
@@ -169,7 +162,17 @@ viewStratifier groupIdx stratifierIdx { code, stratum } =
                         ]
                     ]
                 , tbody [ class "mdc-data-table_content" ]
-                    (List.map viewStratum stratum)
+                    (List.map viewStratum
+                        (List.sortWith
+                            (NaturalOrdering.compareOn
+                                (.value
+                                    >> Maybe.andThen .text
+                                    >> Maybe.withDefault "<unknown>"
+                                )
+                            )
+                            stratum
+                        )
+                    )
                 ]
             ]
         ]

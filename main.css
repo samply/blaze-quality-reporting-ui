@@ -42,17 +42,19 @@ body {
   border-bottom-color: #2f3648;
 }
 
-.content {
+.main-content {
   margin-left: 256px;
   flex-grow: 1;
-}
-
-.main-content {
   margin-top: 64px;
 }
 
-.main-content .mdc-list .mdc-list-item__meta {
-  margin-left: 1rem;
+.app-bar.mdc-top-app-bar {
+  padding-left: 256px;
+}
+
+.app-bar__server_name {
+  display: flex;
+  padding: 12px;
 }
 
 
@@ -334,6 +336,21 @@ body {
 }
 
 
+/*
+ * Settings Page
+ */
+.settings-page {
+  padding: 2rem;
+}
+
+.settings-server-list-card__header {
+  padding: 0 1em;
+}
+
+.settings-server-list-item--active .mdc-list-item__meta {
+  margin-right: 48px;
+}
+
 .mdc-dialog .mdc-dialog__content {
   display: flex;
   flex-direction: column;
@@ -395,7 +412,7 @@ body {
 }
 
 .error__big-http-status {
-  font-family: Roboto,sans-serif;
+  font-family: Roboto, sans-serif;
   font-size: 6rem;
   line-height: 6rem;
   font-weight: 100;
@@ -405,7 +422,7 @@ body {
 }
 
 .error__big-http-status-message {
-  font-family: Roboto,sans-serif;
+  font-family: Roboto, sans-serif;
   font-size: 2rem;
   line-height: 2rem;
   font-weight: 300;

@@ -2,6 +2,8 @@ module Main exposing (Msg(..), main, update, view)
 
 import Browser exposing (Document)
 import Browser.Navigation as Nav
+import Json.Decode as Decode exposing (Decoder, decodeString, decodeValue, succeed)
+import Json.Decode.Pipeline exposing (optional)
 import Json.Encode exposing (Value)
 import Page
 import Page.Blank as Blank
@@ -11,6 +13,7 @@ import Page.Measure as Measure
 import Page.Measure.List as MeasureList
 import Page.MeasureReport as MeasureReport
 import Page.NotFound as NotFound
+import Page.Settings as Settings
 import Route exposing (Route)
 import Session exposing (Session)
 import Url exposing (Url)
@@ -21,7 +24,9 @@ import Url exposing (Url)
 
 
 type alias Model =
-    { drawerOpen : Bool, page : Page }
+    { drawerOpen : Bool
+    , page : Page
+    }
 
 
 type Page
@@ -32,21 +37,43 @@ type Page
     | MeasureList MeasureList.Model
     | Measure Measure.Model
     | MeasureReport MeasureReport.Model
+    | Settings Settings.Model
+
+
+type alias Flags =
+    { session : Session }
 
 
 init : Value -> Url -> Nav.Key -> ( Model, Cmd Msg )
-init _ url navKey =
+init flagsValue url navKey =
+    let
+        flags =
+            decodeValue (flagsDecoder navKey) flagsValue
+                |> Debug.log "flags"
+                |> Result.withDefault (defaultFlags navKey)
+    in
     changeRouteTo (Route.fromUrl url)
         { drawerOpen = False
-        , page =
-            Redirect
-                { navKey = navKey
-                , base =
-                    "http://bierdose:8000/fhir"
-
-                -- "https://blaze.life.uni-leipzig.de/fhir"
-                }
+        , page = Redirect flags.session
         }
+
+
+flagsDecoder : Nav.Key -> Decoder Flags
+flagsDecoder navKey =
+    let
+        sessionDecoder =
+            Decode.string
+                |> Decode.map (decodeString (Session.decoder navKey))
+                |> Decode.map (Debug.log "session")
+                |> Decode.map (Result.withDefault (Session.default navKey))
+    in
+    succeed Flags
+        |> optional "session" sessionDecoder (Session.default navKey)
+
+
+defaultFlags : Nav.Key -> Flags
+defaultFlags navKey =
+    { session = Session.default navKey }
 
 
 
@@ -64,6 +91,7 @@ type Msg
     | GotMeasureListMsg MeasureList.Msg
     | GotMeasureMsg Measure.Msg
     | GotMeasureReportMsg MeasureReport.Msg
+    | GotSettingsMsg Settings.Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -90,7 +118,7 @@ update msg model =
                         Just _ ->
                             ( model
                             , Nav.pushUrl
-                                (Session.navKey (toSession model.page))
+                                (Session.toNavKey (toSession model.page))
                                 (Url.toString url)
                             )
 
@@ -104,7 +132,7 @@ update msg model =
 
         ( ClickedNavItem navItem, _ ) ->
             ( { model | drawerOpen = False }
-            , Route.pushUrl (Session.navKey (toSession model.page)) (toRoute navItem)
+            , Route.pushUrl (Session.toNavKey (toSession model.page)) (toRoute navItem)
             )
 
         ( ClosedDrawer, _ ) ->
@@ -129,6 +157,10 @@ update msg model =
         ( GotMeasureReportMsg subMsg, MeasureReport measureReport ) ->
             MeasureReport.update subMsg measureReport
                 |> updateWith MeasureReport GotMeasureReportMsg model
+
+        ( GotSettingsMsg subMsg, Settings settings ) ->
+            Settings.update subMsg settings
+                |> updateWith Settings GotSettingsMsg model
 
         ( _, _ ) ->
             -- Disregard messages that arrived for the wrong page.
@@ -158,6 +190,9 @@ toSession page =
 
         MeasureReport measure ->
             MeasureReport.toSession measure
+
+        Settings settings ->
+            Settings.toSession settings
 
 
 changeRouteTo : Maybe Route -> Model -> ( Model, Cmd Msg )
@@ -190,6 +225,10 @@ changeRouteTo maybeRoute model =
             MeasureReport.init session id
                 |> updateWith MeasureReport GotMeasureReportMsg model
 
+        Just Route.Settings ->
+            Settings.init session
+                |> updateWith Settings GotSettingsMsg model
+
 
 toRoute : Page.NavItem -> Route
 toRoute navItem =
@@ -199,6 +238,9 @@ toRoute navItem =
 
         Page.Measures ->
             Route.MeasureList
+
+        Page.Settings ->
+            Route.Settings
 
 
 updateWith :
@@ -241,7 +283,7 @@ view model =
                     Page.view
                         toMsg
                         pageViewConfig
-                        model.drawerOpen
+                        (toSession model.page)
                         config
             in
             { title = title
@@ -253,14 +295,14 @@ view model =
             Page.view
                 identity
                 pageViewConfig
-                model.drawerOpen
+                (toSession model.page)
                 Blank.view
 
         NotFound _ ->
             Page.view
                 identity
                 pageViewConfig
-                model.drawerOpen
+                (toSession model.page)
                 NotFound.view
 
         LibraryList libraryList ->
@@ -277,6 +319,9 @@ view model =
 
         MeasureReport measure ->
             viewPage GotMeasureReportMsg (MeasureReport.view measure)
+
+        Settings settings ->
+            viewPage GotSettingsMsg (Settings.view settings)
 
 
 

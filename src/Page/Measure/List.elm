@@ -1,5 +1,6 @@
 module Page.Measure.List exposing (Model, Msg, init, toSession, update, view)
 
+import Component.Error as Error
 import Fhir.Bundle exposing (Bundle)
 import Fhir.CodeableConcept as CodeableConcept
 import Fhir.Expression as Expression
@@ -8,6 +9,7 @@ import Fhir.Measure as Measure exposing (Measure)
 import Html exposing (Html, div, text)
 import Html.Attributes exposing (class)
 import Json.Decode exposing (decodeValue)
+import Loading exposing (Status(..))
 import Material.Button exposing (buttonConfig, textButton)
 import Material.Fab exposing (fab, fabConfig)
 import Material.List exposing (list, listConfig, listItem, listItemConfig)
@@ -26,19 +28,12 @@ type alias Model =
     }
 
 
-type Status a
-    = Loading
-    | LoadingSlowly
-    | Loaded a
-    | Failed
-
-
 init : Session -> ( Model, Cmd Msg )
 init session =
     ( { session = session
       , measures = Loading
       }
-    , searchMeasures session.base ""
+    , searchMeasures (Session.getBase session) ""
     )
 
 
@@ -69,15 +64,15 @@ update msg model =
             )
 
         ClickedCreateMeasure ->
-            ( model, createMeasure model.session.base )
+            ( model, createMeasure (Session.getBase model.session) )
 
         CompletedLoadMeasures (Ok bundle) ->
             ( { model | measures = Loaded (decodeMeasures bundle) }
             , Cmd.none
             )
 
-        CompletedLoadMeasures (Err _) ->
-            ( { model | measures = Failed }
+        CompletedLoadMeasures (Err error) ->
+            ( { model | measures = Failed error }
             , Cmd.none
             )
 
@@ -93,7 +88,7 @@ update msg model =
 
 
 pushMeasureUrl model id =
-    Route.pushUrl (Session.navKey model.session) (Route.Measure id)
+    Route.pushUrl (Session.toNavKey model.session) (Route.Measure id)
 
 
 searchMeasures base query =
@@ -188,8 +183,9 @@ view model =
             LoadingSlowly ->
                 text ""
 
-            Failed ->
-                text "error"
+            Failed error ->
+                div [ class "main-content measure-list=page" ]
+                    [ Error.view error ]
     }
 
 

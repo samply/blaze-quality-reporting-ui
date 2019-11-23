@@ -1,5 +1,6 @@
 module Page.Library exposing (Model, Msg, init, toSession, update, view)
 
+import Component.Error as Error
 import Component.Header as Header
 import Fhir.Attachment exposing (Attachment)
 import Fhir.Http as FhirHttp
@@ -42,7 +43,7 @@ init session id =
       , libraryId = id
       , data = Loading
       }
-    , loadLibrary session.base id
+    , loadLibrary (Session.getBase session) id
     )
 
 
@@ -63,9 +64,9 @@ type Msg
     | CompletedLoadLibrary (Result FhirHttp.Error Library)
     | CompletedSaveLibrary (Result FhirHttp.Error Library)
     | CompletedDeleteLibrary (Result Http.Error ())
-    | HeaderMsg Header.Msg
-    | SidebarMsg Sidebar.Msg
-    | CqlPanelMsg CqlPanel.Msg
+    | GotHeaderMsg Header.Msg
+    | GotSidebarMsg Sidebar.Msg
+    | GotCqlPanelMsg CqlPanel.Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -79,14 +80,14 @@ update msg model =
                         | title = title
                         , description = description
                     }
-                        |> saveLibrary model.session.base model.libraryId
+                        |> saveLibrary (Session.getBase model.session) model.libraryId
                 )
                 model
             )
 
         ClickedHeaderDelete ->
             ( model
-            , deleteLibrary model.session.base model.libraryId
+            , deleteLibrary (Session.getBase model.session) model.libraryId
             )
 
         ClickedCqlPanelSave attachment ->
@@ -96,13 +97,15 @@ update msg model =
                     { library
                         | content = MaybeExtra.toList attachment
                     }
-                        |> saveLibrary model.session.base model.libraryId
+                        |> saveLibrary (Session.getBase model.session) model.libraryId
                 )
                 model
             )
 
         ClickedSave library ->
-            ( model, saveLibrary model.session.base model.libraryId library )
+            ( model
+            , saveLibrary (Session.getBase model.session) model.libraryId library
+            )
 
         CompletedLoadLibrary (Ok library) ->
             ( { model | data = loaded library }, Cmd.none )
@@ -120,27 +123,27 @@ update msg model =
 
         CompletedDeleteLibrary (Ok _) ->
             ( model
-            , Route.pushUrl (Session.navKey model.session) Route.LibraryList
+            , Route.pushUrl (Session.toNavKey model.session) Route.LibraryList
             )
 
         CompletedDeleteLibrary (Err _) ->
             ( model, Cmd.none )
 
-        HeaderMsg msg_ ->
+        GotHeaderMsg msg_ ->
             let
                 updateHeader f =
                     updateData (\data -> { data | header = f data.header })
             in
             ( updateHeader (Header.update msg_) model, Cmd.none )
 
-        SidebarMsg msg_ ->
+        GotSidebarMsg msg_ ->
             let
                 updateSidebar f =
                     updateData (\data -> { data | sidebar = f data.sidebar })
             in
             ( updateSidebar (Sidebar.update msg_) model, Cmd.none )
 
-        CqlPanelMsg msg_ ->
+        GotCqlPanelMsg msg_ ->
             let
                 updateCqlPanel f =
                     updateData (\data -> { data | cqlPanel = f data.cqlPanel })
@@ -205,7 +208,7 @@ view model =
             , content =
                 div [ class "main-content library-page" ]
                     [ viewLibrary data
-                    , Sidebar.view { onMsg = SidebarMsg, onSave = ClickedSave }
+                    , Sidebar.view { onMsg = GotSidebarMsg, onSave = ClickedSave }
                         data.sidebar
                     ]
             }
@@ -244,7 +247,7 @@ viewHeader header =
     Header.view
         { onSave = ClickedHeaderSave
         , onDelete = ClickedHeaderDelete
-        , onMsg = HeaderMsg
+        , onMsg = GotHeaderMsg
         }
         header
 
@@ -252,7 +255,7 @@ viewHeader header =
 viewCqlPanel cqlPanel =
     CqlPanel.view
         { onSave = ClickedCqlPanelSave
-        , onMsg = CqlPanelMsg
+        , onMsg = GotCqlPanelMsg
         }
         cqlPanel
 
@@ -275,5 +278,4 @@ viewError error =
                         [ text "Other Error" ]
 
         _ ->
-            div [ class "error" ]
-                [ text "Other Error" ]
+            Error.view error

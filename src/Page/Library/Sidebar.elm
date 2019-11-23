@@ -28,13 +28,13 @@ init library =
 
 
 type Msg
-    = UrlMsg Url.Msg
+    = GotUrlMsg Url.Msg
 
 
 update : Msg -> Model -> Model
 update msg model =
     case msg of
-        UrlMsg msg_ ->
+        GotUrlMsg msg_ ->
             { model | url = Url.update msg_ model.url }
 
 
@@ -56,7 +56,7 @@ view config model =
 
 viewUrl { onMsg, onSave } ({ library } as model) =
     Url.view
-        { onMsg = UrlMsg >> onMsg
+        { onMsg = GotUrlMsg >> onMsg
         , onSave = \url -> onSave { library | url = url }
         }
         model.url

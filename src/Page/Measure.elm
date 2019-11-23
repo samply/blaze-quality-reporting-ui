@@ -1,5 +1,6 @@
 module Page.Measure exposing (Model, Msg, init, toSession, update, view)
 
+import Component.Error as Error
 import Component.Header as Header
 import Component.Sidebar exposing (sidebar, sidebarConfig)
 import Fhir.CodeableConcept exposing (CodeableConcept)
@@ -67,13 +68,13 @@ init session id =
     ( { session = session
       , populationDialog = PopulationDialog.init
       , stratifierDialog = StratifierDialog.init
-      , assocLibraryDialog = AssocLibraryDialog.init session.base
+      , assocLibraryDialog = AssocLibraryDialog.init (Session.getBase session)
       , measureId = id
       , data = Loading
       , onPopulationSave = Nothing
       , onStratifierSave = Nothing
       }
-    , loadMeasure session.base id
+    , loadMeasure (Session.getBase session) id
     )
 
 
@@ -103,12 +104,12 @@ type Msg
     | CompletedLoadMeasure (Result FhirHttp.Error Measure)
     | CompletedSaveMeasure (Result FhirHttp.Error Measure)
     | CompletedDeleteMeasure (Result Http.Error ())
-    | PopulationDialogMsg PopulationDialog.Msg
-    | StratifierDialogMsg StratifierDialog.Msg
-    | AssocLibraryDialogMsg AssocLibraryDialog.Msg
-    | HeaderMsg Header.Msg
-    | SidebarLibraryMsg SidebarLibrary.Msg
-    | ReportPanelMsg ReportPanel.Msg
+    | GotPopulationDialogMsg PopulationDialog.Msg
+    | GotStratifierDialogMsg StratifierDialog.Msg
+    | GotAssocLibraryDialogMsg AssocLibraryDialog.Msg
+    | GotHeaderMsg Header.Msg
+    | GotSidebarLibraryMsg SidebarLibrary.Msg
+    | GotReportPanelMsg ReportPanel.Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -122,14 +123,14 @@ update msg model =
                         | title = title
                         , description = description
                     }
-                        |> saveMeasure model.session.base model.measureId
+                        |> saveMeasure (Session.getBase model.session) model.measureId
                 )
                 model
             )
 
         ClickedHeaderDelete ->
             ( model
-            , deleteMeasure model.session.base model.measureId
+            , deleteMeasure (Session.getBase model.session) model.measureId
             )
 
         ClickedPopulationEdit groupIdx populationIdx ->
@@ -197,7 +198,7 @@ update msg model =
             , doWithData
                 (\{ measure } ->
                     updateGroup (deleteStratifier stratifierIdx) groupIdx measure
-                        |> saveMeasure model.session.base model.measureId
+                        |> saveMeasure (Session.getBase model.session) model.measureId
                 )
                 model
             )
@@ -227,7 +228,7 @@ update msg model =
                     updateGroup (setPopulation populationIdx population)
                         groupIdx
                         measure
-                        |> saveMeasure model.session.base model.measureId
+                        |> saveMeasure (Session.getBase model.session) model.measureId
                 )
                 model
             )
@@ -239,7 +240,7 @@ update msg model =
                     updateGroup (addStratifier stratifier)
                         groupIdx
                         measure
-                        |> saveMeasure model.session.base model.measureId
+                        |> saveMeasure (Session.getBase model.session) model.measureId
                 )
                 model
             )
@@ -251,14 +252,14 @@ update msg model =
                     updateGroup (setStratifier stratifierIdx stratifier)
                         groupIdx
                         measure
-                        |> saveMeasure model.session.base model.measureId
+                        |> saveMeasure (Session.getBase model.session) model.measureId
                 )
                 model
             )
 
         ClickedReport id ->
             ( model
-            , Route.pushUrl (Session.navKey model.session)
+            , Route.pushUrl (Session.toNavKey model.session)
                 (Route.MeasureReport id)
             )
 
@@ -267,7 +268,7 @@ update msg model =
             , doWithData
                 (\{ measure } ->
                     { measure | library = MaybeExtra.toList library.url }
-                        |> saveMeasure model.session.base model.measureId
+                        |> saveMeasure (Session.getBase model.session) model.measureId
                 )
                 model
             )
@@ -275,7 +276,7 @@ update msg model =
         CompletedLoadMeasure (Ok measure) ->
             let
                 ( data, cmd ) =
-                    loaded model.session.base model.measureId measure
+                    loaded (Session.getBase model.session) model.measureId measure
             in
             ( { model | data = data }, cmd )
 
@@ -287,7 +288,7 @@ update msg model =
         CompletedSaveMeasure (Ok measure) ->
             let
                 ( data, cmd ) =
-                    loaded model.session.base model.measureId measure
+                    loaded (Session.getBase model.session) model.measureId measure
             in
             ( { model | data = data }
                 |> updatePopulationDialog PopulationDialog.doClose
@@ -301,33 +302,33 @@ update msg model =
 
         CompletedDeleteMeasure (Ok _) ->
             ( model
-            , Route.pushUrl (Session.navKey model.session) Route.MeasureList
+            , Route.pushUrl (Session.toNavKey model.session) Route.MeasureList
             )
 
         CompletedDeleteMeasure (Err _) ->
             ( model, Cmd.none )
 
-        PopulationDialogMsg msg_ ->
+        GotPopulationDialogMsg msg_ ->
             ( updatePopulationDialog (PopulationDialog.update msg_) model
             , Cmd.none
             )
 
-        StratifierDialogMsg msg_ ->
+        GotStratifierDialogMsg msg_ ->
             ( updateStratifierDialog (StratifierDialog.update msg_) model
             , Cmd.none
             )
 
-        AssocLibraryDialogMsg msg_ ->
+        GotAssocLibraryDialogMsg msg_ ->
             updateAssocLibraryDialog (AssocLibraryDialog.update msg_) model
 
-        HeaderMsg msg_ ->
+        GotHeaderMsg msg_ ->
             let
                 updateHeader f =
                     updateData (\data -> { data | header = f data.header })
             in
             ( updateHeader (Header.update msg_) model, Cmd.none )
 
-        SidebarLibraryMsg msg_ ->
+        GotSidebarLibraryMsg msg_ ->
             let
                 updateSidebarLibrary f =
                     updateData
@@ -339,7 +340,7 @@ update msg model =
             , Cmd.none
             )
 
-        ReportPanelMsg msg_ ->
+        GotReportPanelMsg msg_ ->
             let
                 updateReportPanel f =
                     updateDataWithCmd
@@ -349,7 +350,7 @@ update msg model =
                                     f data.reportPanel
                             in
                             ( { data | reportPanel = reportPanel }
-                            , Cmd.map ReportPanelMsg cmd
+                            , Cmd.map GotReportPanelMsg cmd
                             )
                         )
             in
@@ -434,7 +435,7 @@ updateAssocLibraryDialog f model =
             f model.assocLibraryDialog
     in
     ( { model | assocLibraryDialog = assocLibraryDialog }
-    , Cmd.map AssocLibraryDialogMsg cmd
+    , Cmd.map GotAssocLibraryDialogMsg cmd
     )
 
 
@@ -453,8 +454,8 @@ loaded base measureId measure =
         , reportPanel = reportPanel
         }
     , Cmd.batch
-        [ sidebarLibraryCmd |> Cmd.map SidebarLibraryMsg
-        , reportPanelCmd |> Cmd.map ReportPanelMsg
+        [ sidebarLibraryCmd |> Cmd.map GotSidebarLibraryMsg
+        , reportPanelCmd |> Cmd.map GotReportPanelMsg
         ]
     )
 
@@ -530,7 +531,7 @@ view model =
 viewPopulationDialog : Model -> Html Msg
 viewPopulationDialog model =
     PopulationDialog.view
-        { onMsg = PopulationDialogMsg
+        { onMsg = GotPopulationDialogMsg
         , onSave = model.onPopulationSave
         }
         model.populationDialog
@@ -539,7 +540,7 @@ viewPopulationDialog model =
 viewStratifierDialog : Model -> Html Msg
 viewStratifierDialog model =
     StratifierDialog.view
-        { onMsg = StratifierDialogMsg
+        { onMsg = GotStratifierDialogMsg
         , onSave = model.onStratifierSave
         }
         model.stratifierDialog
@@ -548,7 +549,7 @@ viewStratifierDialog model =
 viewAssocLibraryDialog : Model -> Html Msg
 viewAssocLibraryDialog model =
     AssocLibraryDialog.view
-        { onMsg = AssocLibraryDialogMsg
+        { onMsg = GotAssocLibraryDialogMsg
         , onSelect = SelectedLibrary
         }
         model.assocLibraryDialog
@@ -579,7 +580,7 @@ viewHeader header =
     Header.view
         { onSave = ClickedHeaderSave
         , onDelete = ClickedHeaderDelete
-        , onMsg = HeaderMsg
+        , onMsg = GotHeaderMsg
         }
         header
 
@@ -730,7 +731,7 @@ viewReportPanel measure reportPanel =
             { ready = not (List.isEmpty measure.library)
             , onLibraryAssoc = ClickedLibraryAssoc
             , onReportClick = ClickedReport
-            , onMsg = ReportPanelMsg
+            , onMsg = GotReportPanelMsg
             }
     in
     ReportPanel.view config reportPanel
@@ -738,7 +739,7 @@ viewReportPanel measure reportPanel =
 
 viewError : FhirHttp.Error -> Html Msg
 viewError error =
-    case error of
+    case Debug.log "error" error of
         FhirHttp.BadStatus status _ ->
             case status of
                 404 ->
@@ -754,5 +755,4 @@ viewError error =
                         [ text "Other Error" ]
 
         _ ->
-            div [ class "error" ]
-                [ text "Other Error" ]
+            Error.view error

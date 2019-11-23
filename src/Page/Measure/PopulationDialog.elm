@@ -8,13 +8,12 @@ module Page.Measure.PopulationDialog exposing
     , view
     )
 
+import Events exposing (onEnter)
 import Fhir.CodeableConcept as CodeableConcept exposing (CodeableConcept)
 import Fhir.Expression exposing (Expression)
 import Fhir.Measure as Measure exposing (Measure)
-import Html exposing (Attribute, Html)
+import Html exposing (Html)
 import Html.Attributes exposing (class)
-import Html.Events exposing (keyCode, on)
-import Json.Decode as Decode
 import Material.Button exposing (buttonConfig, textButton)
 import Material.Dialog exposing (dialog, dialogConfig)
 import Material.TextArea exposing (textArea, textAreaConfig)
@@ -227,16 +226,3 @@ criteriaField onSave onMsg expression =
                     |> Maybe.map List.singleton
                     |> Maybe.withDefault []
         }
-
-
-onEnter : msg -> Attribute msg
-onEnter msg =
-    let
-        isEnter code =
-            if code == 13 then
-                Decode.succeed msg
-
-            else
-                Decode.fail "not ENTER"
-    in
-    on "keyup" (Decode.andThen isEnter keyCode)

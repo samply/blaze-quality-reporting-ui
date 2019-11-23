@@ -1,5 +1,6 @@
 module Page.Library.List exposing (Model, Msg, init, toSession, update, view)
 
+import Component.Error as Error
 import Fhir.Bundle exposing (Bundle)
 import Fhir.CodeableConcept as CodeableConcept
 import Fhir.Http as FhirHttp
@@ -7,6 +8,7 @@ import Fhir.Library as Library exposing (Library)
 import Html exposing (Html, div, text)
 import Html.Attributes exposing (class)
 import Json.Decode exposing (decodeValue)
+import Loading exposing (Status(..))
 import Material.Button exposing (buttonConfig, textButton)
 import Material.Fab exposing (fab, fabConfig)
 import Material.List exposing (list, listConfig, listItem, listItemConfig)
@@ -25,19 +27,12 @@ type alias Model =
     }
 
 
-type Status a
-    = Loading
-    | LoadingSlowly
-    | Loaded a
-    | Failed
-
-
 init : Session -> ( Model, Cmd Msg )
 init session =
     ( { session = session
       , libraries = Loading
       }
-    , searchLibraries session.base ""
+    , searchLibraries (Session.getBase session) ""
     )
 
 
@@ -68,15 +63,15 @@ update msg model =
             )
 
         ClickedCreateLibrary ->
-            ( model, createLibrary model.session.base )
+            ( model, createLibrary (Session.getBase model.session) )
 
         CompletedLoadLibraries (Ok bundle) ->
             ( { model | libraries = Loaded (decodeLibraries bundle) }
             , Cmd.none
             )
 
-        CompletedLoadLibraries (Err _) ->
-            ( { model | libraries = Failed }
+        CompletedLoadLibraries (Err error) ->
+            ( { model | libraries = Failed error }
             , Cmd.none
             )
 
@@ -92,7 +87,7 @@ update msg model =
 
 
 pushLibraryUrl model id =
-    Route.pushUrl (Session.navKey model.session) (Route.Library id)
+    Route.pushUrl (Session.toNavKey model.session) (Route.Library id)
 
 
 searchLibraries base query =
@@ -158,8 +153,9 @@ view model =
             LoadingSlowly ->
                 text ""
 
-            Failed ->
-                text "error"
+            Failed error ->
+                div [ class "main-content library-list-page" ]
+                    [ Error.view error ]
     }
 
 

@@ -116,10 +116,14 @@ addReport report model =
 
 
 loadReports base measureId =
+    let
+        url =
+            UrlBuilder.crossOrigin base [ "Measure", measureId ] []
+    in
     FhirHttp.searchType CompletedLoadReports
         base
         "MeasureReport"
-        [ UrlBuilder.string "measure" measureId ]
+        [ UrlBuilder.string "measure" url ]
 
 
 decodeReports : Bundle -> List MeasureReport

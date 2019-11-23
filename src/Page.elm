@@ -1,7 +1,7 @@
 module Page exposing (..)
 
 import Browser exposing (Document)
-import Html exposing (Html, div, h3, h6, text)
+import Html exposing (Html, div, h3, h6, span, text)
 import Html.Attributes exposing (class)
 import Material.Drawer
     exposing
@@ -25,11 +25,13 @@ import Material.List
         )
 import Material.TopAppBar as TopAppBar exposing (topAppBar, topAppBarConfig)
 import Material.Typography as Typography
+import Session exposing (Session)
 
 
 type NavItem
     = Libraries
     | Measures
+    | Settings
 
 
 type alias Config msg =
@@ -44,10 +46,10 @@ type alias Config msg =
 view :
     (pageMsg -> msg)
     -> Config msg
-    -> Bool
+    -> Session
     -> { title : List String, content : Html pageMsg }
     -> Document msg
-view toPageMsg config drawerOpen { title, content } =
+view toPageMsg config session { title, content } =
     { title =
         "Blaze QR"
             :: title
@@ -58,11 +60,9 @@ view toPageMsg config drawerOpen { title, content } =
             [ Typography.typography
             , class "page"
             ]
-            [ drawer config
-            , div [ class "content" ]
-                [ appBar config.onNavIconClick title
-                , Html.map toPageMsg content
-                ]
+            [ appBar session title
+            , drawer config
+            , Html.map toPageMsg content
             ]
         ]
     }
@@ -102,7 +102,7 @@ drawer config =
                 , listItemDivider listItemDividerConfig
                 , listItem
                     { listItemConfig
-                        | onClick = Just (config.onNavItemClick Measures)
+                        | onClick = Just (config.onNavItemClick Settings)
                     }
                     [ listItemGraphic [] [ icon iconConfig "settings" ]
                     , text "Settings"
@@ -112,13 +112,21 @@ drawer config =
         ]
 
 
-appBar : msg -> List String -> Html msg
-appBar onNavIconClick title =
-    topAppBar { topAppBarConfig | fixed = True }
+appBar : Session -> List String -> Html msg
+appBar session title =
+    topAppBar
+        { topAppBarConfig
+            | fixed = True
+            , additionalAttributes = [ class "app-bar" ]
+        }
         [ TopAppBar.row []
             [ TopAppBar.section [ TopAppBar.alignStart ]
-                [ Html.span [ TopAppBar.title ]
+                [ span [ TopAppBar.title ]
                     [ text (String.join " " title) ]
+                ]
+            , TopAppBar.section [ TopAppBar.alignEnd ]
+                [ span [ class "app-bar__server_name" ]
+                    [ text (Session.activeServer session).name ]
                 ]
             ]
         ]
