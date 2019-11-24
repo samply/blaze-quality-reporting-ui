@@ -1,5 +1,17 @@
 # Blaze Quality Reporting UI
 
+## Usage
+
+Start the container:
+```
+docker run -p 8000:80 liferesearch/blaze-quality-reporting-ui:0.1.0
+```
+
+Open in your browser:
+```
+http://localhost:8000
+```
+
 ## Development
 
 Install http-server:
