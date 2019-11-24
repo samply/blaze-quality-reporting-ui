@@ -11,6 +11,7 @@ module Fhir.MeasureReport exposing
 
 import Fhir.CodeableConcept as CodeableConcept exposing (CodeableConcept)
 import Fhir.Extension as Extension exposing (Extension)
+import Fhir.MeasureReport.Stratum as Stratum
 import Fhir.PrimitiveTypes exposing (Canonical, DateTime, Id, Markdown, Uri)
 import Json.Decode exposing (Decoder, andThen, fail, int, list, maybe, string, succeed)
 import Json.Decode.Pipeline exposing (optional, required)
@@ -61,6 +62,7 @@ type alias Stratifier =
 
 type alias Stratum =
     { value : Maybe CodeableConcept
+    , component : List Stratum.Component
     , population : List Population
     }
 
@@ -146,4 +148,5 @@ stratumDecoder : Decoder Stratum
 stratumDecoder =
     succeed Stratum
         |> optional "value" (maybe CodeableConcept.decoder) Nothing
+        |> optional "component" (list Stratum.componentDecoder) []
         |> optional "population" (list populationDecoder) []

@@ -14,6 +14,7 @@ import Fhir.CodeableConcept as CodeableConcept exposing (CodeableConcept)
 import Fhir.Coding exposing (Coding)
 import Fhir.Encode exposing (object, optionalListPair, optionalPair, pair)
 import Fhir.Expression as Expression exposing (Expression)
+import Fhir.Measure.Stratifier as Stratifier
 import Fhir.PrimitiveTypes exposing (Canonical, Id, Markdown, Uri)
 import Json.Decode exposing (Decoder, list, maybe, string, succeed)
 import Json.Decode.Pipeline exposing (optional, required)
@@ -52,6 +53,7 @@ type alias Stratifier =
     { code : Maybe CodeableConcept
     , description : Maybe String
     , criteria : Maybe Expression
+    , component : List Stratifier.Component
     }
 
 
@@ -75,6 +77,7 @@ newStratifier =
     { code = Nothing
     , description = Nothing
     , criteria = Just (Expression.cql Nothing)
+    , component = []
     }
 
 
@@ -114,11 +117,12 @@ encodePopulation { code, description, criteria } =
 
 
 encodeStratifier : Stratifier -> Value
-encodeStratifier { code, description, criteria } =
+encodeStratifier { code, description, criteria, component } =
     object
         [ optionalPair "code" CodeableConcept.encode code
         , optionalPair "description" Encode.string description
         , optionalPair "criteria" Expression.encode criteria
+        , optionalListPair "component" Stratifier.encodeComponent component
         ]
 
 
@@ -159,3 +163,4 @@ stratifierDecoder =
         |> optional "code" (maybe CodeableConcept.decoder) Nothing
         |> optional "description" (maybe string) Nothing
         |> optional "criteria" (maybe Expression.decoder) Nothing
+        |> optional "component" (list Stratifier.componentDecoder) []

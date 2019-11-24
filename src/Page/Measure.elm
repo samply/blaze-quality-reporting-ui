@@ -673,7 +673,20 @@ viewStratifierPanel groupIdx stratifiers =
 
 
 viewStratifier : Int -> Int -> Measure.Stratifier -> Html Msg
-viewStratifier groupIdx stratifierIdx { code, description } =
+viewStratifier groupIdx stratifierIdx { code, description, component } =
+    let
+        title =
+            if List.isEmpty component then
+                code
+                    |> Maybe.andThen .text
+                    |> Maybe.withDefault
+                        ("Stratifier " ++ String.fromInt (stratifierIdx + 1))
+
+            else
+                component
+                    |> List.filterMap (.code >> Maybe.andThen .text)
+                    |> String.join ", "
+    in
     card
         { cardConfig
             | outlined = True
@@ -686,12 +699,7 @@ viewStratifier groupIdx stratifierIdx { code, description } =
                         [ class "measure-stratifier__title"
                         , class "mdc-typography--headline6"
                         ]
-                        [ code
-                            |> Maybe.andThen .text
-                            |> Maybe.withDefault
-                                ("Stratifier " ++ String.fromInt (stratifierIdx + 1))
-                            |> text
-                        ]
+                        [ text title ]
                     ]
             , cardBlock <|
                 div [ class "measure-stratifier__description" ]

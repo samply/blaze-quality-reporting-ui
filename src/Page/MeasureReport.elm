@@ -142,35 +142,43 @@ viewStratifierPanel groupIdx stratifiers =
 
 
 viewStratifier : Int -> Int -> MeasureReport.Stratifier -> Html Msg
-viewStratifier groupIdx stratifierIdx { code, stratum } =
+viewStratifier groupIdx stratifierIdx stratifier =
+    let
+        codeTexts =
+            List.filterMap .text stratifier.code
+
+        headerCell codeText =
+            th [ class "mdc-data-table__header-cell" ]
+                [ text codeText ]
+    in
     div [ class "measure-report-stratifier" ]
         [ div [ class "measure-report-stratifier__title" ]
             [ h3 [ class "mdc-typography--headline6" ]
-                [ text (stratifierTitle stratifierIdx code) ]
+                [ text (stratifierTitle stratifier.code) ]
             ]
         , div [ class "mdc-data-table" ]
             [ table [ class "mdc-data-table__table" ]
                 [ thead []
-                    [ tr [ class "mdc-data-table__header-row" ]
-                        [ th [ class "mdc-data-table__header-cell" ]
-                            [ text "Value" ]
-                        , th
-                            [ class "mdc-data-table__header-cell"
-                            , class "mdc-data-table__header-cell--numeric"
-                            ]
-                            [ text "Count" ]
-                        ]
+                    [ tr [ class "mdc-data-table__header-row" ] <|
+                        List.map headerCell codeTexts
+                            ++ [ th
+                                    [ class "mdc-data-table__header-cell"
+                                    , class "mdc-data-table__header-cell--numeric"
+                                    ]
+                                    [ text "Count" ]
+                               ]
                     ]
                 , tbody [ class "mdc-data-table_content" ]
-                    (List.map viewStratum
+                    (List.map (viewStratum codeTexts)
                         (List.sortWith
                             (NaturalOrdering.compareOn
-                                (.value
-                                    >> Maybe.andThen .text
-                                    >> Maybe.withDefault "<unknown>"
+                                (\stratum ->
+                                    codeTexts
+                                        |> List.map (stratumValue stratum)
+                                        |> String.join " "
                                 )
                             )
-                            stratum
+                            stratifier.stratum
                         )
                     )
                 ]
@@ -178,22 +186,34 @@ viewStratifier groupIdx stratifierIdx { code, stratum } =
         ]
 
 
-stratifierTitle : Int -> List CodeableConcept -> String
-stratifierTitle stratifierIdx code =
+stratifierTitle : List CodeableConcept -> String
+stratifierTitle code =
     code
-        |> List.head
-        |> Maybe.andThen .text
-        |> Maybe.withDefault
-            ("Stratifier " ++ String.fromInt (stratifierIdx + 1))
+        |> List.filterMap .text
+        |> String.join ", "
 
 
-viewStratum : MeasureReport.Stratum -> Html Msg
-viewStratum stratum =
+stratumValue : MeasureReport.Stratum -> String -> String
+stratumValue stratum codeText =
+    if List.isEmpty stratum.component then
+        stratum.value
+            |> Maybe.andThen .text
+            |> Maybe.withDefault "<unknown>"
+
+    else
+        stratum.component
+            |> List.filter (.code >> .text >> (==) (Just codeText))
+            |> List.head
+            |> Maybe.andThen (.value >> .text)
+            |> Maybe.withDefault "<unknown>"
+
+
+viewStratum : List String -> MeasureReport.Stratum -> Html Msg
+viewStratum codeTexts stratum =
     let
-        value =
-            stratum.value
-                |> Maybe.andThen .text
-                |> Maybe.withDefault "<unknown>"
+        valueCell codeText =
+            td [ class "mdc-data-table__cell" ]
+                [ text (stratumValue stratum codeText) ]
 
         countCell population =
             td
@@ -203,8 +223,8 @@ viewStratum stratum =
                 [ population.count |> countToString |> text ]
     in
     tr [ class "mdc-data-table__row" ]
-        (td [ class "mdc-data-table__cell" ] [ text value ]
-            :: List.map countCell stratum.population
+        (List.map valueCell codeTexts
+            ++ List.map countCell stratum.population
         )
 
 

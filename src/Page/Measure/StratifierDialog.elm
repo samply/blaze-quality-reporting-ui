@@ -10,20 +10,29 @@ module Page.Measure.StratifierDialog exposing
 
 import Events exposing (onEnter)
 import Fhir.CodeableConcept exposing (CodeableConcept)
-import Fhir.Expression exposing (Expression)
+import Fhir.Expression as Expression exposing (Expression)
 import Fhir.Measure as Measure exposing (Measure)
-import Html exposing (Html)
+import Fhir.Measure.Stratifier exposing (newComponent)
+import Html exposing (Html, div, text)
 import Html.Attributes exposing (class)
+import List.Extra exposing (removeAt, updateAt)
 import Material.Button exposing (buttonConfig, textButton)
 import Material.Dialog exposing (dialog, dialogConfig)
+import Material.Icon exposing (icon, iconConfig)
+import Material.IconButton exposing (iconButton, iconButtonConfig)
 import Material.TextArea exposing (textArea, textAreaConfig)
 import Material.TextField exposing (textField, textFieldConfig)
 import Maybe.Extra as MaybeExtra
+import Page.Measure.StratifierDialog.ComponentForm as ComponentForm
+
+
+
+-- MODEL
 
 
 type Model
     = Closed
-    | Open { stratifier : Measure.Stratifier }
+    | Open { componentForms : List ComponentForm.Model }
 
 
 init : Model
@@ -37,14 +46,31 @@ init =
 
 type Msg
     = ClickedClose
-    | EnteredCode String
-    | EnteredDescription String
-    | EnteredCriteria String
+    | ClickedAddComponent
+    | ClickedRemoveComponent Int
+    | GotComponentFormMsg Int ComponentForm.Msg
 
 
 doOpen : Measure.Stratifier -> Model -> Model
 doOpen stratifier _ =
-    Open { stratifier = stratifier }
+    if List.isEmpty stratifier.component then
+        Open
+            { componentForms =
+                [ ComponentForm.init
+                    { code = stratifier.code
+                    , description = stratifier.description
+                    , criteria =
+                        stratifier.criteria
+                            |> Maybe.withDefault (Expression.cql Nothing)
+                    }
+                ]
+            }
+
+    else
+        Open
+            { componentForms =
+                List.map ComponentForm.init stratifier.component
+            }
 
 
 doClose : Model -> Model
@@ -58,36 +84,41 @@ update msg model =
         ClickedClose ->
             doClose model
 
-        EnteredCode code ->
-            updateStratifier
-                (\stratifier ->
-                    { stratifier
-                        | code = Just { coding = [], text = Just code }
-                    }
-                )
-                model
+        ClickedAddComponent ->
+            addComponentForm (ComponentForm.init newComponent) model
 
-        EnteredDescription description ->
-            updateStratifier
-                (\stratifier -> { stratifier | description = Just description })
-                model
+        ClickedRemoveComponent idx ->
+            removeComponentForm idx model
 
-        EnteredCriteria expression ->
-            updateStratifier
-                (updateCriteria
-                    (\criteria -> { criteria | expression = Just expression })
-                )
-                model
+        GotComponentFormMsg idx msg_ ->
+            updateComponentForm idx (ComponentForm.update msg_) model
 
 
-updateCriteria f stratifier =
-    { stratifier | criteria = Maybe.map f stratifier.criteria }
+addComponentForm form =
+    updateData
+        (\data ->
+            { data | componentForms = data.componentForms ++ [ form ] }
+        )
 
 
-updateStratifier f model =
+updateComponentForm idx f =
+    updateData
+        (\data ->
+            { data | componentForms = updateAt idx f data.componentForms }
+        )
+
+
+removeComponentForm idx =
+    updateData
+        (\data ->
+            { data | componentForms = removeAt idx data.componentForms }
+        )
+
+
+updateData f model =
     case model of
         Open data ->
-            Open { data | stratifier = f data.stratifier }
+            Open (f data)
 
         Closed ->
             model
@@ -106,26 +137,16 @@ type alias Config msg =
 view : Config msg -> Model -> Html msg
 view { onMsg, onSave } model =
     let
-        stratifier =
+        componentForms =
             case model of
                 Open data ->
-                    Just data.stratifier
+                    data.componentForms
 
                 Closed ->
-                    Nothing
-
-        code =
-            stratifier
-                |> Maybe.andThen .code
-                |> Maybe.andThen .text
-
-        criteria =
-            stratifier
-                |> Maybe.andThen .criteria
-                |> Maybe.andThen .expression
+                    []
 
         onSave_ =
-            MaybeExtra.andMap stratifier onSave
+            MaybeExtra.andMap (toStratifier componentForms) onSave
     in
     dialog
         { dialogConfig
@@ -135,12 +156,7 @@ view { onMsg, onSave } model =
         }
         { title = Just "Stratifier"
         , content =
-            [ codeField onSave_ onMsg code
-            , stratifier
-                |> Maybe.andThen .description
-                |> descriptionField onSave_ onMsg
-            , criteriaField onSave_ onMsg criteria
-            ]
+            List.indexedMap (viewComponentForm onMsg onSave_ (List.length componentForms - 1)) componentForms
         , actions =
             [ textButton
                 { buttonConfig
@@ -150,7 +166,7 @@ view { onMsg, onSave } model =
             , textButton
                 { buttonConfig
                     | onClick = onSave_
-                    , disabled = isEmpty code || isEmpty criteria
+                    , disabled = not (isValid model)
                 }
                 "Save"
             ]
@@ -166,58 +182,54 @@ isOpen model =
             False
 
 
-isEmpty : Maybe String -> Bool
-isEmpty s =
-    s
-        |> Maybe.map String.isEmpty
-        |> Maybe.withDefault True
+isValid : Model -> Bool
+isValid model =
+    case model of
+        Open data ->
+            List.all ComponentForm.isValid data.componentForms
+
+        Closed ->
+            False
 
 
-codeField onSave onMsg code =
-    textField
-        { textFieldConfig
-            | label = Just "Name"
-            , value = Maybe.withDefault "" code
-            , onInput = Just (EnteredCode >> onMsg)
-            , required = True
-            , valid =
-                Maybe.map (String.isEmpty >> not) code
-                    |> Maybe.withDefault False
-            , additionalAttributes =
-                onSave
-                    |> Maybe.map onEnter
-                    |> Maybe.map List.singleton
-                    |> Maybe.withDefault []
+viewComponentForm : (Msg -> msg) -> Maybe msg -> Int -> Int -> ComponentForm.Model -> Html msg
+viewComponentForm onMsg onSave lastIdx idx model =
+    ComponentForm.view
+        { onMsg = GotComponentFormMsg idx >> onMsg
+        , control =
+            if idx == lastIdx then
+                ComponentForm.AddComponent (onMsg ClickedAddComponent)
+
+            else
+                ComponentForm.RemoveComponent (onMsg (ClickedRemoveComponent idx))
+        , onSave = onSave
         }
+        model
 
 
-descriptionField onSave onMsg description =
-    textArea
-        { textAreaConfig
-            | label = Just "Description"
-            , value = Maybe.withDefault "" description
-            , onInput = Just (EnteredDescription >> onMsg)
-            , additionalAttributes =
-                onSave
-                    |> Maybe.map onEnter
-                    |> Maybe.map List.singleton
-                    |> Maybe.withDefault []
-        }
+toStratifier : List ComponentForm.Model -> Maybe Measure.Stratifier
+toStratifier forms =
+    case forms of
+        [] ->
+            Nothing
 
+        [ oneForm ] ->
+            let
+                component =
+                    ComponentForm.toStratifierComponent oneForm
+            in
+            Just
+                { code = component.code
+                , description = component.description
+                , criteria = Just component.criteria
+                , component = []
+                }
 
-criteriaField onSave onMsg expression =
-    textField
-        { textFieldConfig
-            | label = Just "CQL Criteria"
-            , value = Maybe.withDefault "" expression
-            , onInput = Just (EnteredCriteria >> onMsg)
-            , required = True
-            , valid =
-                Maybe.map (String.isEmpty >> not) expression
-                    |> Maybe.withDefault False
-            , additionalAttributes =
-                onSave
-                    |> Maybe.map onEnter
-                    |> Maybe.map List.singleton
-                    |> Maybe.withDefault []
-        }
+        multipleForms ->
+            Just
+                { code = Nothing
+                , description = Nothing
+                , criteria = Nothing
+                , component =
+                    List.map ComponentForm.toStratifierComponent multipleForms
+                }

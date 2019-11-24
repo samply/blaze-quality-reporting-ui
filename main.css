@@ -227,6 +227,16 @@ body {
   padding: 0 1em;
 }
 
+.measure-population-dialog.mdc-dialog .mdc-dialog__content {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.measure-population-dialog.mdc-dialog .mdc-dialog__content .mdc-text-field:not(:last-child) {
+  margin-bottom: 1rem;
+}
+
 
 /*
  * Measure Stratifier Panel
@@ -251,12 +261,48 @@ body {
   padding: 0 1em;
 }
 
+.measure-stratifier__title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .measure-stratifier__description {
   padding: 0 1em;
 }
 
 .measure-report-panel {
   color: var(--mdc-theme-text-primary-on-background);
+}
+
+.measure-stratifier-dialog .mdc-dialog__content .measure-stratifier-dialog-component:not(:last-child) {
+  margin-bottom: 1rem;
+}
+
+.measure-stratifier-dialog-component {
+  display: flex;
+}
+
+.measure-stratifier-dialog-component__front {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.measure-stratifier-dialog-component__icon {
+  padding: 12px;
+}
+
+.measure-stratifier-dialog-component__form {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  flex-grow: 1;
+  margin-left: 1rem;
+}
+
+.measure-stratifier-dialog-component__form .mdc-text-field:not(:last-child) {
+  margin-bottom: 1rem;
 }
 
 
@@ -298,7 +344,7 @@ body {
 
 
 /*
- * Measure Population
+ * Measure Report Population
  */
 
 .measure-report-population {
@@ -353,16 +399,16 @@ body {
   margin-right: 48px;
 }
 
-.mdc-dialog .mdc-dialog__content {
+.settings-server-dialog.mdc-dialog .mdc-dialog__content {
   display: flex;
   flex-direction: column;
   align-items: stretch;
 }
 
-.mdc-dialog .mdc-dialog__content .mdc-select,
-.mdc-dialog .mdc-dialog__content .mdc-text-field:not(:last-child) {
+.settings-server-dialog.mdc-dialog .mdc-dialog__content .mdc-text-field:not(:last-child) {
   margin-bottom: 1rem;
 }
+
 
 .cql-panel {
   color: var(--mdc-theme-text-primary-on-background);
