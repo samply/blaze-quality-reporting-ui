@@ -35,10 +35,14 @@ default : Nav.Key -> Session
 default navKey =
     { navKey = navKey
     , servers =
-        Zipper.singleton
+        Zipper.fromCons
             { name = "Localhost"
             , url = "http://localhost:8080/fhir"
             }
+            [ { name = "Blaze LIFE"
+              , url = "https://blaze.life.uni-leipzig.de/fhir"
+              }
+            ]
     }
 
 
