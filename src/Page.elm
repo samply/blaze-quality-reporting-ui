@@ -51,7 +51,7 @@ view :
     -> Document msg
 view toPageMsg config session { title, content } =
     { title =
-        "Blaze QR"
+        "Blaze Quality Reporting"
             :: title
             |> List.reverse
             |> String.join " - "
