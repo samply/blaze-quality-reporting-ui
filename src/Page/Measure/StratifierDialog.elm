@@ -119,6 +119,11 @@ view { onMsg, onSave } model =
                 |> Maybe.andThen .code
                 |> Maybe.andThen .text
 
+        criteria =
+            stratifier
+                |> Maybe.andThen .criteria
+                |> Maybe.andThen .expression
+
         onSave_ =
             MaybeExtra.andMap stratifier onSave
     in
@@ -134,10 +139,7 @@ view { onMsg, onSave } model =
             , stratifier
                 |> Maybe.andThen .description
                 |> descriptionField onSave_ onMsg
-            , stratifier
-                |> Maybe.andThen .criteria
-                |> Maybe.andThen .expression
-                |> criteriaField onSave_ onMsg
+            , criteriaField onSave_ onMsg criteria
             ]
         , actions =
             [ textButton
@@ -148,10 +150,7 @@ view { onMsg, onSave } model =
             , textButton
                 { buttonConfig
                     | onClick = onSave_
-                    , disabled =
-                        code
-                            |> Maybe.map String.isEmpty
-                            |> Maybe.withDefault True
+                    , disabled = isEmpty code || isEmpty criteria
                 }
                 "Save"
             ]
@@ -167,10 +166,17 @@ isOpen model =
             False
 
 
+isEmpty : Maybe String -> Bool
+isEmpty s =
+    s
+        |> Maybe.map String.isEmpty
+        |> Maybe.withDefault True
+
+
 codeField onSave onMsg code =
     textField
         { textFieldConfig
-            | label = Just "Type"
+            | label = Just "Name"
             , value = Maybe.withDefault "" code
             , onInput = Just (EnteredCode >> onMsg)
             , required = True
@@ -202,9 +208,13 @@ descriptionField onSave onMsg description =
 criteriaField onSave onMsg expression =
     textField
         { textFieldConfig
-            | label = Just "Criteria"
+            | label = Just "CQL Criteria"
             , value = Maybe.withDefault "" expression
             , onInput = Just (EnteredCriteria >> onMsg)
+            , required = True
+            , valid =
+                Maybe.map (String.isEmpty >> not) expression
+                    |> Maybe.withDefault False
             , additionalAttributes =
                 onSave
                     |> Maybe.map onEnter
