@@ -1,5 +1,11 @@
 # Blaze Quality Reporting UI
 
+## Public Demo
+
+https://blaze.life.uni-leipzig.de/quality-reporting
+
+Please be aware that your browser might not allow to access a Blaze server over insecure HTTP. Please use the Docker container in case you get network errors.
+
 ## Usage
 
 Start the container:
