@@ -6,6 +6,10 @@ body {
   margin: 0;
 }
 
+.fas {
+  font-size: 24px;
+}
+
 .page {
   display: flex;
   align-items: stretch;
@@ -448,6 +452,14 @@ body {
 
 .cql-panel:not(.cql-panel--edit) .cql-panel__action-buttons {
   display: none;
+}
+
+
+/*
+ * Settings Page
+ */
+.help-page {
+  padding: 2rem;
 }
 
 

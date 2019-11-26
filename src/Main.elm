@@ -7,6 +7,7 @@ import Json.Decode.Pipeline exposing (optional)
 import Json.Encode exposing (Value)
 import Page
 import Page.Blank as Blank
+import Page.Help as Help
 import Page.Library as Library
 import Page.Library.List as LibraryList
 import Page.Measure as Measure
@@ -38,6 +39,7 @@ type Page
     | Measure Measure.Model
     | MeasureReport MeasureReport.Model
     | Settings Settings.Model
+    | Help Help.Model
 
 
 type alias Flags =
@@ -90,6 +92,7 @@ type Msg
     | GotMeasureMsg Measure.Msg
     | GotMeasureReportMsg MeasureReport.Msg
     | GotSettingsMsg Settings.Msg
+    | GotHelpMsg Help.Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -160,6 +163,10 @@ update msg model =
             Settings.update subMsg settings
                 |> updateWith Settings GotSettingsMsg model
 
+        ( GotHelpMsg subMsg, Help help ) ->
+            Help.update subMsg help
+                |> updateWith Help GotHelpMsg model
+
         ( _, _ ) ->
             -- Disregard messages that arrived for the wrong page.
             ( model, Cmd.none )
@@ -191,6 +198,9 @@ toSession page =
 
         Settings settings ->
             Settings.toSession settings
+
+        Help help ->
+            Help.toSession help
 
 
 changeRouteTo : Maybe Route -> Model -> ( Model, Cmd Msg )
@@ -227,6 +237,10 @@ changeRouteTo maybeRoute model =
             Settings.init session
                 |> updateWith Settings GotSettingsMsg model
 
+        Just Route.Help ->
+            Help.init session
+                |> updateWith Help GotHelpMsg model
+
 
 toRoute : Page.NavItem -> Route
 toRoute navItem =
@@ -239,6 +253,9 @@ toRoute navItem =
 
         Page.Settings ->
             Route.Settings
+
+        Page.Help ->
+            Route.Help
 
 
 updateWith :
@@ -320,6 +337,9 @@ view model =
 
         Settings settings ->
             viewPage GotSettingsMsg (Settings.view settings)
+
+        Help help ->
+            viewPage GotHelpMsg (Help.view help)
 
 
 

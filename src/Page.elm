@@ -1,7 +1,8 @@
 module Page exposing (..)
 
 import Browser exposing (Document)
-import Html exposing (Html, div, h3, h6, span, text)
+import Component.FontAwesome as Fa
+import Html exposing (Html, div, h3, h6, i, span, text)
 import Html.Attributes exposing (class)
 import Material.Drawer
     exposing
@@ -32,6 +33,7 @@ type NavItem
     = Libraries
     | Measures
     | Settings
+    | Help
 
 
 type alias Config msg =
@@ -82,14 +84,14 @@ drawer config =
                     { listItemConfig
                         | onClick = Just (config.onNavItemClick Libraries)
                     }
-                    [ listItemGraphic [] [ icon iconConfig "library_books" ]
+                    [ listItemGraphic [] [ Fa.icon "book" ]
                     , text "Libraries"
                     ]
                 , listItem
                     { listItemConfig
                         | onClick = Just (config.onNavItemClick Measures)
                     }
-                    [ listItemGraphic [] [ icon iconConfig "help" ]
+                    [ listItemGraphic [] [ Fa.icon "calculator" ]
                     , text "Measures"
                     ]
                 , listItemDivider listItemDividerConfig
@@ -99,6 +101,13 @@ drawer config =
                     }
                     [ listItemGraphic [] [ icon iconConfig "settings" ]
                     , text "Settings"
+                    ]
+                , listItem
+                    { listItemConfig
+                        | onClick = Just (config.onNavItemClick Help)
+                    }
+                    [ listItemGraphic [] [ icon iconConfig "help" ]
+                    , text "Help"
                     ]
                 ]
             ]

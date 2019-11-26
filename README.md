@@ -26,6 +26,20 @@ Install http-server:
 npm install http-server -g
 ```
 
+Compile Elm to main.js:
+
+```bash
+make build-dev
+```
+
+Start the http-server:
+
+```bash
+http-server -p 8000
+```
+
+Keep the server running and recompile on every change. Keep the dev tools in Chrome open and disable caching. Reload the current page to see changes.
+
 ## License
 
 Copyright 2019 The Samply Development Community

@@ -19,6 +19,7 @@ type Route
     | Measure Id
     | MeasureReport Id
     | Settings
+    | Help
 
 
 parser : Parser (Route -> a) a
@@ -30,6 +31,7 @@ parser =
         , Parser.map Measure (s "measure" </> string)
         , Parser.map MeasureReport (s "measure-report" </> string)
         , Parser.map Settings (s "settings")
+        , Parser.map Help (s "help")
         ]
 
 
@@ -82,5 +84,8 @@ routeToString page =
 
                 Settings ->
                     [ "settings" ]
+
+                Help ->
+                    [ "help" ]
     in
     "#/" ++ String.join "/" pieces
