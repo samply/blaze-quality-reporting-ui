@@ -141,11 +141,13 @@ view model =
     , content =
         case model.libraries of
             Loaded libraries ->
-                if List.isEmpty libraries then
-                    emptyListPlaceholder
+                div [ class "main-content library-list-page" ]
+                    [ if List.isEmpty libraries then
+                        emptyListPlaceholder
 
-                else
-                    libraryList libraries
+                      else
+                        libraryList libraries
+                    ]
 
             Loading ->
                 text ""
@@ -160,7 +162,7 @@ view model =
 
 
 emptyListPlaceholder =
-    div [ class "main-content library-list__empty-placeholder" ]
+    div [ class "library-list-page__empty-placeholder" ]
         [ textButton
             { buttonConfig | onClick = Just ClickedCreateLibrary }
             "create the first library"
@@ -168,7 +170,7 @@ emptyListPlaceholder =
 
 
 libraryList libraries =
-    div [ class "main-content library-list" ]
+    div [ class "library-list-page__list" ]
         [ createButton
         , list listConfig <|
             List.map libraryListItem libraries
@@ -190,6 +192,6 @@ createButton =
     fab
         { fabConfig
             | onClick = Just ClickedCreateLibrary
-            , additionalAttributes = [ class "library-list__create-button" ]
+            , additionalAttributes = [ class "library-list-page__create-button" ]
         }
         "add"

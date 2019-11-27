@@ -171,11 +171,13 @@ view model =
     , content =
         case model.measures of
             Loaded measures ->
-                if List.isEmpty measures then
-                    emptyListPlaceholder
+                div [ class "main-content measure-list-page" ]
+                    [ if List.isEmpty measures then
+                        emptyListPlaceholder
 
-                else
-                    measureList measures
+                      else
+                        measureList measures
+                    ]
 
             Loading ->
                 text ""
@@ -184,13 +186,13 @@ view model =
                 text ""
 
             Failed error ->
-                div [ class "main-content measure-list=page" ]
+                div [ class "main-content measure-list-page" ]
                     [ Error.view error ]
     }
 
 
 emptyListPlaceholder =
-    div [ class "main-content measure-list__empty-placeholder" ]
+    div [ class "measure-list-page__empty-placeholder" ]
         [ textButton
             { buttonConfig | onClick = Just ClickedCreateMeasure }
             "create the first measure"
@@ -198,7 +200,7 @@ emptyListPlaceholder =
 
 
 measureList measures =
-    div [ class "main-content measure-list" ]
+    div [ class "measure-list-page__list" ]
         [ createButton
         , list listConfig <|
             List.map measureListItem measures
@@ -220,6 +222,6 @@ createButton =
     fab
         { fabConfig
             | onClick = Just ClickedCreateMeasure
-            , additionalAttributes = [ class "measure-list__create-button" ]
+            , additionalAttributes = [ class "measure-list-page__create-button" ]
         }
         "add"

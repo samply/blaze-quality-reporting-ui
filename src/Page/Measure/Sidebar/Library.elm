@@ -52,12 +52,8 @@ update msg model =
     case msg of
         CompletedSearch (Ok bundle) ->
             case decodeLibraries bundle of
-                firstLibrary :: otherLibraries ->
-                    if List.isEmpty otherLibraries then
-                        { model | library = Just firstLibrary }
-
-                    else
-                        model
+                [ onlyLibrary ] ->
+                    { model | library = Just onlyLibrary }
 
                 _ ->
                     model
