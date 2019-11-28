@@ -36,11 +36,11 @@ default navKey =
     { navKey = navKey
     , servers =
         Zipper.fromCons
-            { name = "Localhost"
-            , url = "http://localhost:8080/fhir"
+            { name = "Blaze LIFE"
+            , url = "https://blaze.life.uni-leipzig.de/fhir"
             }
-            [ { name = "Blaze LIFE"
-              , url = "https://blaze.life.uni-leipzig.de/fhir"
+            [ { name = "Localhost"
+              , url = "http://localhost:8080/fhir"
               }
             ]
     }
