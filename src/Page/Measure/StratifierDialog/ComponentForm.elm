@@ -151,7 +151,7 @@ descriptionField onSave onMsg description =
 criteriaField onSave onMsg expression =
     textField
         { textFieldConfig
-            | label = Just "CQL Criteria"
+            | label = Just "CQL Criteria Name"
             , value = Maybe.withDefault "" expression
             , onInput = Just (EnteredCriteria >> onMsg)
             , required = True
