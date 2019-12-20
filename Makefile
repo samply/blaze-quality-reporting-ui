@@ -5,4 +5,10 @@ build:
 build-dev:
 	elm make src/Main.elm --output=main.js
 
-.PHONY: build, build-dev
+format:
+	elm-format src --yes
+
+review:
+	elm-review
+
+.PHONY: build, build-dev, format, review

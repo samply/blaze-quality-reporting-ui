@@ -9,9 +9,8 @@ module Page.Measure.PopulationDialog exposing
     )
 
 import Events exposing (onEnter)
-import Fhir.CodeableConcept as CodeableConcept exposing (CodeableConcept)
-import Fhir.Expression exposing (Expression)
-import Fhir.Measure as Measure exposing (Measure)
+import Fhir.CodeableConcept as CodeableConcept
+import Fhir.Measure as Measure
 import Html exposing (Html)
 import Html.Attributes exposing (class)
 import Material.Button exposing (buttonConfig, textButton)

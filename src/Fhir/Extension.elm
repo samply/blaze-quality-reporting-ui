@@ -1,4 +1,4 @@
-module Fhir.Extension exposing (Extension, Value(..), decoder)
+module Fhir.Extension exposing (Extension, Value(..), decoder, encode)
 
 import Fhir.Encode exposing (object, optionalPair, pair)
 import Fhir.PrimitiveTypes exposing (Uri)

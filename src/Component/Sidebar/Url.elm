@@ -1,4 +1,14 @@
-module Page.Library.Sidebar.Url exposing (Model, Msg, init, update, view)
+module Component.Sidebar.Url exposing (Model, Msg, init, update, view)
+
+{-| This component is a canonical URL input box in the sidebar.
+
+It can be used for Resources like Library or Measure which have canonical URLs.
+
+The component has a read-only view with an edit button which transforms the view
+into an editable view with save an cancel actions. The message constructor for
+the onSave action can be supplied to the ['view'](#view) function.
+
+-}
 
 import Component.Sidebar
     exposing
@@ -11,26 +21,28 @@ import Component.Sidebar
         , sidebarEntryContent
         , sidebarEntryTitle
         )
+import Events exposing (onEnterEsc)
 import Fhir.PrimitiveTypes exposing (Uri)
-import Html exposing (Html, text)
-import Html.Attributes exposing (style)
+import Html exposing (text)
 import Material.Button exposing (buttonConfig, outlinedButton, unelevatedButton)
 import Material.TextField exposing (textField, textFieldConfig)
 
 
 
--- model
+-- MODEL
 
 
 type alias Model =
-    { url : Maybe Uri
+    { originalUrl : Maybe Uri
+    , enteredUrl : Maybe Uri
     , edit : Bool
     }
 
 
 init : Maybe Uri -> Model
 init url =
-    { url = url
+    { originalUrl = url
+    , enteredUrl = url
     , edit = False
     }
 
@@ -45,17 +57,19 @@ type Msg
     | EnteredUrl String
 
 
-update : Msg -> Model -> Model
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         ClickedEdit ->
-            { model | edit = True }
+            ( { model | edit = True }, Cmd.none )
 
         ClickedCancel ->
-            { model | edit = False }
+            ( { model | enteredUrl = model.originalUrl, edit = False }
+            , Cmd.none
+            )
 
         EnteredUrl s ->
-            { model | url = Just s }
+            ( { model | enteredUrl = Just s }, Cmd.none )
 
 
 
@@ -69,7 +83,7 @@ type alias Config msg =
 
 
 view : Config msg -> Model -> SidebarEntry msg
-view { onMsg, onSave } { url, edit } =
+view { onMsg, onSave } { enteredUrl, edit } =
     sidebarEntry sidebarEntryConfig
         [ sidebarEntryTitle []
             [ text "URL"
@@ -80,24 +94,26 @@ view { onMsg, onSave } { url, edit } =
             if edit then
                 [ textField
                     { textFieldConfig
-                        | value = url |> Maybe.withDefault ""
+                        | value = enteredUrl |> Maybe.withDefault ""
                         , onInput = Just (EnteredUrl >> onMsg)
                         , outlined = True
+                        , additionalAttributes =
+                            [ onEnterEsc
+                                (onSave enteredUrl)
+                                (onMsg ClickedCancel)
+                            ]
                     }
                 ]
 
             else
-                [ url |> Maybe.withDefault "<not-specified>" |> text ]
+                [ enteredUrl |> Maybe.withDefault "<not-specified>" |> text ]
         , sidebarEntryActionButtons [] <|
             if edit then
                 [ unelevatedButton
-                    { buttonConfig | onClick = Just (onSave url) }
+                    { buttonConfig | onClick = Just (onSave enteredUrl) }
                     "save"
                 , outlinedButton
-                    { buttonConfig
-                        | onClick = Just (onMsg ClickedCancel)
-                        , additionalAttributes = [ style "margin-left" "0.5rem" ]
-                    }
+                    { buttonConfig | onClick = Just (onMsg ClickedCancel) }
                     "cancel"
                 ]
 

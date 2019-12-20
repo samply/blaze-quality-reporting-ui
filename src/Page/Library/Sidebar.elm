@@ -1,9 +1,9 @@
 module Page.Library.Sidebar exposing (Model, Msg, init, update, view)
 
 import Component.Sidebar exposing (sidebar, sidebarConfig)
+import Component.Sidebar.Url as Url
 import Fhir.Library exposing (Library)
 import Html exposing (Html)
-import Page.Library.Sidebar.Url as Url
 
 
 
@@ -31,11 +31,15 @@ type Msg
     = GotUrlMsg Url.Msg
 
 
-update : Msg -> Model -> Model
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         GotUrlMsg msg_ ->
-            { model | url = Url.update msg_ model.url }
+            let
+                ( url, cmd ) =
+                    Url.update msg_ model.url
+            in
+            ( { model | url = url }, Cmd.map GotUrlMsg cmd )
 
 
 

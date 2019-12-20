@@ -13,7 +13,7 @@ import Component.Sidebar
 import Fhir.Bundle exposing (Bundle)
 import Fhir.Http as FhirHttp
 import Fhir.Library as Library exposing (Library)
-import Fhir.PrimitiveTypes exposing (Canonical, Id)
+import Fhir.PrimitiveTypes exposing (Canonical)
 import Html exposing (Html, a, text)
 import Json.Decode exposing (decodeValue)
 import Route exposing (href)

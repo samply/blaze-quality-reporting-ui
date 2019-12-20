@@ -12,7 +12,7 @@ module Fhir.MeasureReport exposing
 import Fhir.CodeableConcept as CodeableConcept exposing (CodeableConcept)
 import Fhir.Extension as Extension exposing (Extension)
 import Fhir.MeasureReport.Stratum as Stratum
-import Fhir.PrimitiveTypes exposing (Canonical, DateTime, Id, Markdown, Uri)
+import Fhir.PrimitiveTypes exposing (Canonical, DateTime, Id)
 import Json.Decode exposing (Decoder, andThen, fail, int, list, maybe, string, succeed)
 import Json.Decode.Pipeline exposing (optional, required)
 

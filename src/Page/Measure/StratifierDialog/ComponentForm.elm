@@ -10,8 +10,6 @@ module Page.Measure.StratifierDialog.ComponentForm exposing
     )
 
 import Events exposing (onEnter)
-import Fhir.CodeableConcept exposing (CodeableConcept)
-import Fhir.Expression exposing (Expression)
 import Fhir.Measure.Stratifier as Stratifier
 import Html exposing (Html, div)
 import Html.Attributes exposing (class)

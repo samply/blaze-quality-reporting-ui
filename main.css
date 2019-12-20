@@ -99,7 +99,8 @@ body {
   background-color: #fff;
 }
 
-.sidebar-entry__action-buttons {
+.sidebar-entry__action-buttons mdc-button:not(:first-child) {
+  margin-left: 0.5rem
 }
 
 

@@ -8,20 +8,14 @@ module Page.Measure.StratifierDialog exposing
     , view
     )
 
-import Events exposing (onEnter)
-import Fhir.CodeableConcept exposing (CodeableConcept)
-import Fhir.Expression as Expression exposing (Expression)
-import Fhir.Measure as Measure exposing (Measure)
+import Fhir.Expression as Expression
+import Fhir.Measure as Measure
 import Fhir.Measure.Stratifier exposing (newComponent)
-import Html exposing (Html, div, text)
+import Html exposing (Html)
 import Html.Attributes exposing (class)
 import List.Extra exposing (removeAt, updateAt)
 import Material.Button exposing (buttonConfig, textButton)
 import Material.Dialog exposing (dialog, dialogConfig)
-import Material.Icon exposing (icon, iconConfig)
-import Material.IconButton exposing (iconButton, iconButtonConfig)
-import Material.TextArea exposing (textArea, textAreaConfig)
-import Material.TextField exposing (textField, textFieldConfig)
 import Maybe.Extra as MaybeExtra
 import Page.Measure.StratifierDialog.ComponentForm as ComponentForm
 

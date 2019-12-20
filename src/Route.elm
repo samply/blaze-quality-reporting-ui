@@ -1,7 +1,7 @@
 module Route exposing (Route(..), fromUrl, href, pushUrl)
 
 import Browser.Navigation as Nav
-import Fhir.PrimitiveTypes exposing (Id, Uri)
+import Fhir.PrimitiveTypes exposing (Id)
 import Html exposing (Attribute)
 import Html.Attributes as Attr
 import Url exposing (Url)

@@ -2,12 +2,10 @@ module Page.Measure exposing (Model, Msg, init, toSession, update, view)
 
 import Component.Error as Error
 import Component.Header as Header
-import Component.Sidebar exposing (sidebar, sidebarConfig)
-import Fhir.CodeableConcept exposing (CodeableConcept)
 import Fhir.Http as FhirHttp
 import Fhir.Library exposing (Library)
 import Fhir.Measure as Measure exposing (Measure)
-import Fhir.PrimitiveTypes exposing (Canonical, Id)
+import Fhir.PrimitiveTypes exposing (Id)
 import Html exposing (Html, div, h3, h4, text)
 import Html.Attributes exposing (class)
 import Http
@@ -33,7 +31,7 @@ import Maybe.Extra as MaybeExtra
 import Page.Measure.AssocLibraryDialog as AssocLibraryDialog
 import Page.Measure.PopulationDialog as PopulationDialog
 import Page.Measure.ReportPanel as ReportPanel
-import Page.Measure.Sidebar.Library as SidebarLibrary
+import Page.Measure.Sidebar as Sidebar
 import Page.Measure.StratifierDialog as StratifierDialog
 import Route
 import Session exposing (Session)
@@ -58,7 +56,7 @@ type alias Model =
 type alias Data =
     { measure : Measure
     , header : Header.Model
-    , sidebarLibrary : SidebarLibrary.Model
+    , sidebar : Sidebar.Model
     , reportPanel : ReportPanel.Model
     }
 
@@ -96,6 +94,7 @@ type Msg
     | ClickedAddStratifier Int
     | ClickedLibraryAssoc
     | ClickedSidebarLibraryEdit
+    | ClickedSidebarSave Measure
     | ClickedPopulationSaveAtUpdate Int Int Measure.Population
     | ClickedStratifierSaveAtAdd Int Measure.Stratifier
     | ClickedStratifierSaveAtUpdate Int Int Measure.Stratifier
@@ -108,7 +107,7 @@ type Msg
     | GotStratifierDialogMsg StratifierDialog.Msg
     | GotAssocLibraryDialogMsg AssocLibraryDialog.Msg
     | GotHeaderMsg Header.Msg
-    | GotSidebarLibraryMsg SidebarLibrary.Msg
+    | GotSidebarMsg Sidebar.Msg
     | GotReportPanelMsg ReportPanel.Msg
 
 
@@ -221,6 +220,11 @@ update msg model =
         ClickedSidebarLibraryEdit ->
             updateAssocLibraryDialog AssocLibraryDialog.doOpen model
 
+        ClickedSidebarSave measure ->
+            ( model
+            , saveMeasure (Session.getBase model.session) model.measureId measure
+            )
+
         ClickedPopulationSaveAtUpdate groupIdx populationIdx population ->
             ( model
             , doWithData
@@ -328,36 +332,33 @@ update msg model =
             in
             ( updateHeader (Header.update msg_) model, Cmd.none )
 
-        GotSidebarLibraryMsg msg_ ->
-            let
-                updateSidebarLibrary f =
-                    updateData
-                        (\data ->
-                            { data | sidebarLibrary = f data.sidebarLibrary }
-                        )
-            in
-            ( updateSidebarLibrary (SidebarLibrary.update msg_) model
-            , Cmd.none
-            )
+        GotSidebarMsg msg_ ->
+            updateDataWithCmd
+                (\data ->
+                    let
+                        ( sidebar, cmd ) =
+                            Sidebar.update msg_ data.sidebar
+                    in
+                    ( { data | sidebar = sidebar }
+                    , Cmd.map GotSidebarMsg cmd
+                    )
+                )
+                model
 
         GotReportPanelMsg msg_ ->
-            let
-                updateReportPanel f =
-                    updateDataWithCmd
-                        (\data ->
-                            let
-                                ( reportPanel, cmd ) =
-                                    f data.reportPanel
-                            in
-                            ( { data | reportPanel = reportPanel }
-                            , Cmd.map GotReportPanelMsg cmd
-                            )
-                        )
-            in
-            updateReportPanel (ReportPanel.update msg_) model
+            updateDataWithCmd
+                (\data ->
+                    let
+                        ( reportPanel, cmd ) =
+                            ReportPanel.update msg_ data.reportPanel
+                    in
+                    ( { data | reportPanel = reportPanel }
+                    , Cmd.map GotReportPanelMsg cmd
+                    )
+                )
+                model
 
 
-doWithData : (Data -> Cmd Msg) -> Model -> Cmd Msg
 doWithData f model =
     case model.data of
         Loaded data ->
@@ -441,8 +442,8 @@ updateAssocLibraryDialog f model =
 
 loaded base measureId measure =
     let
-        ( sidebarLibrary, sidebarLibraryCmd ) =
-            SidebarLibrary.init base (List.head measure.library)
+        ( sidebar, sidebarCmd ) =
+            Sidebar.init base measure
 
         ( reportPanel, reportPanelCmd ) =
             ReportPanel.init base measureId
@@ -450,11 +451,11 @@ loaded base measureId measure =
     ( Loaded
         { measure = measure
         , header = Header.init measure.title measure.description
-        , sidebarLibrary = sidebarLibrary
+        , sidebar = sidebar
         , reportPanel = reportPanel
         }
     , Cmd.batch
-        [ sidebarLibraryCmd |> Cmd.map GotSidebarLibraryMsg
+        [ sidebarCmd |> Cmd.map GotSidebarMsg
         , reportPanelCmd |> Cmd.map GotReportPanelMsg
         ]
     )
@@ -492,7 +493,7 @@ view model =
                     , viewStratifierDialog model
                     , viewAssocLibraryDialog model
                     , viewMeasure data
-                    , viewSidebar data.sidebarLibrary
+                    , viewSidebar data.sidebar
                     ]
             }
 
@@ -555,14 +556,14 @@ viewAssocLibraryDialog model =
         model.assocLibraryDialog
 
 
-viewSidebar : SidebarLibrary.Model -> Html Msg
-viewSidebar sidebarLibrary =
-    let
-        config =
-            { onEdit = ClickedSidebarLibraryEdit }
-    in
-    sidebar sidebarConfig
-        [ SidebarLibrary.view config sidebarLibrary ]
+viewSidebar : Sidebar.Model -> Html Msg
+viewSidebar sidebar =
+    Sidebar.view
+        { onMsg = GotSidebarMsg
+        , onSave = ClickedSidebarSave
+        , onLibraryEdit = ClickedSidebarLibraryEdit
+        }
+        sidebar
 
 
 viewMeasure : Data -> Html Msg

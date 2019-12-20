@@ -20,7 +20,6 @@ import Material.Card
         , cardBlock
         , cardConfig
         )
-import Material.Icon exposing (icon, iconConfig)
 import Material.IconButton exposing (iconButton, iconButtonConfig)
 import Material.List
     exposing

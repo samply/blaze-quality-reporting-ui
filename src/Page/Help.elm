@@ -9,7 +9,7 @@ module Page.Help exposing
 
 import Html exposing (Html, a, div, h2, li, text, ul)
 import Html.Attributes exposing (class, href)
-import Session exposing (Server, Session)
+import Session exposing (Session)
 
 
 
@@ -41,7 +41,7 @@ type Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
-update msg model =
+update _ model =
     ( model, Cmd.none )
 
 
@@ -50,7 +50,7 @@ update msg model =
 
 
 view : Model -> { title : List String, content : Html Msg }
-view model =
+view _ =
     { title = [ "Help" ]
     , content =
         div [ class "main-content help-page" ]

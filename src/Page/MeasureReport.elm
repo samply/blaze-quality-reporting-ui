@@ -233,25 +233,3 @@ countToString count =
     count
         |> Maybe.map String.fromInt
         |> Maybe.withDefault "<unknown>"
-
-
-viewError : FhirHttp.Error -> Html Msg
-viewError error =
-    case error of
-        FhirHttp.BadStatus status _ ->
-            case status of
-                404 ->
-                    div [ class "error" ]
-                        [ div [ class "error__big-http-status" ]
-                            [ text "404" ]
-                        , div [ class "error__big-http-status-message" ]
-                            [ text "Not Found" ]
-                        ]
-
-                _ ->
-                    div [ class "error" ]
-                        [ text "Other Error" ]
-
-        _ ->
-            div [ class "error" ]
-                [ text "Other Error" ]

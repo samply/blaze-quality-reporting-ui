@@ -3,7 +3,7 @@ module Page.Measure.ReportPanel exposing (Model, Msg, init, update, view)
 import Fhir.Bundle exposing (Bundle)
 import Fhir.Http as FhirHttp exposing (Error(..))
 import Fhir.MeasureReport as MeasureReport exposing (MeasureReport, Status(..))
-import Fhir.OperationOutcome as OperationOutcome exposing (Issue)
+import Fhir.OperationOutcome as OperationOutcome
 import Fhir.PrimitiveTypes exposing (Id)
 import Html exposing (Html, div, h3, h4, h5, li, p, text, ul)
 import Html.Attributes exposing (class)
@@ -15,8 +15,7 @@ import Material.Icon exposing (icon, iconConfig)
 import Material.LayoutGrid exposing (layoutGridCell, span12)
 import Material.List
     exposing
-        ( ListItem
-        , list
+        ( list
         , listConfig
         , listItem
         , listItemConfig

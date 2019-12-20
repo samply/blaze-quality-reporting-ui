@@ -115,6 +115,7 @@ createMeasure base =
     let
         measure =
             { id = Nothing
+            , url = Nothing
             , name = Nothing
             , title = Nothing
             , subtitle = Nothing

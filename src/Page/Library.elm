@@ -5,7 +5,7 @@ import Component.Header as Header
 import Fhir.Attachment exposing (Attachment)
 import Fhir.Http as FhirHttp
 import Fhir.Library as Library exposing (Library)
-import Fhir.PrimitiveTypes exposing (Canonical, Id)
+import Fhir.PrimitiveTypes exposing (Id)
 import Html exposing (..)
 import Html.Attributes exposing (class)
 import Http
@@ -60,7 +60,7 @@ type Msg
     = ClickedHeaderSave (Maybe String) (Maybe String)
     | ClickedHeaderDelete
     | ClickedCqlPanelSave (Maybe Attachment)
-    | ClickedSave Library
+    | ClickedSidebarSave Library
     | CompletedLoadLibrary (Result FhirHttp.Error Library)
     | CompletedSaveLibrary (Result FhirHttp.Error Library)
     | CompletedDeleteLibrary (Result Http.Error ())
@@ -102,7 +102,7 @@ update msg model =
                 model
             )
 
-        ClickedSave library ->
+        ClickedSidebarSave library ->
             ( model
             , saveLibrary (Session.getBase model.session) model.libraryId library
             )
@@ -137,11 +137,17 @@ update msg model =
             ( updateHeader (Header.update msg_) model, Cmd.none )
 
         GotSidebarMsg msg_ ->
-            let
-                updateSidebar f =
-                    updateData (\data -> { data | sidebar = f data.sidebar })
-            in
-            ( updateSidebar (Sidebar.update msg_) model, Cmd.none )
+            updateDataWithCmd
+                (\data ->
+                    let
+                        ( newSidebar, cmd ) =
+                            Sidebar.update msg_ data.sidebar
+                    in
+                    ( { data | sidebar = newSidebar }
+                    , Cmd.map GotSidebarMsg cmd
+                    )
+                )
+                model
 
         GotCqlPanelMsg msg_ ->
             let
@@ -151,7 +157,6 @@ update msg model =
             ( updateCqlPanel (CqlPanel.update msg_) model, Cmd.none )
 
 
-doWithData : (Data -> Cmd Msg) -> Model -> Cmd Msg
 doWithData f model =
     case model.data of
         Loaded data ->
@@ -168,6 +173,19 @@ updateData f model =
 
         _ ->
             model
+
+
+updateDataWithCmd f model =
+    case model.data of
+        Loaded data ->
+            let
+                ( data_, cmd ) =
+                    f data
+            in
+            ( { model | data = Loaded data_ }, cmd )
+
+        _ ->
+            ( model, Cmd.none )
 
 
 loaded library =
@@ -208,7 +226,8 @@ view model =
             , content =
                 div [ class "main-content library-page" ]
                     [ viewLibrary data
-                    , Sidebar.view { onMsg = GotSidebarMsg, onSave = ClickedSave }
+                    , Sidebar.view
+                        { onMsg = GotSidebarMsg, onSave = ClickedSidebarSave }
                         data.sidebar
                     ]
             }
