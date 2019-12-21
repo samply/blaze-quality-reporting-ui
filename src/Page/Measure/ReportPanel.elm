@@ -4,7 +4,7 @@ import Fhir.Bundle exposing (Bundle)
 import Fhir.Http as FhirHttp exposing (Error(..))
 import Fhir.MeasureReport as MeasureReport exposing (MeasureReport, Status(..))
 import Fhir.OperationOutcome as OperationOutcome
-import Fhir.PrimitiveTypes exposing (Id)
+import Fhir.PrimitiveTypes exposing (Canonical, Id, Uri)
 import Html exposing (Html, div, h3, h4, h5, li, p, text, ul)
 import Html.Attributes exposing (class)
 import Json.Decode exposing (decodeValue)
@@ -31,20 +31,27 @@ import Url.Builder as UrlBuilder
 
 type alias Model =
     { base : String
-    , measureId : Id
+    , measureUrl : Maybe Uri
+    , libraryRef : Maybe Canonical
     , reports : Loading.Status (List MeasureReport)
     , error : Maybe FhirHttp.Error
     }
 
 
-init : String -> Id -> ( Model, Cmd Msg )
-init base measureId =
+init : String -> Maybe Uri -> Maybe Canonical -> ( Model, Cmd Msg )
+init base measureUrl libraryRef =
     ( { base = base
-      , measureId = measureId
+      , measureUrl = measureUrl
+      , libraryRef = libraryRef
       , reports = Loading.Loading
       , error = Nothing
       }
-    , loadReports base measureId
+    , case ( measureUrl, libraryRef ) of
+        ( Just url, Just _ ) ->
+            loadReports base url
+
+        _ ->
+            Cmd.none
     )
 
 
@@ -64,15 +71,20 @@ update msg model =
     case msg of
         ClickedGenerate ->
             ( model
-            , FhirHttp.postOperationInstance CompletedGenerateReport
-                model.base
-                "Measure"
-                model.measureId
-                "$evaluate-measure"
-                [ UrlBuilder.string "periodStart" "1900"
-                , UrlBuilder.string "periodEnd" "2100"
-                ]
-                MeasureReport.decoder
+            , case model.measureUrl of
+                Just url ->
+                    FhirHttp.postOperationType CompletedGenerateReport
+                        model.base
+                        "Measure"
+                        "$evaluate-measure"
+                        [ UrlBuilder.string "measure" url
+                        , UrlBuilder.string "periodStart" "1900"
+                        , UrlBuilder.string "periodEnd" "2100"
+                        ]
+                        MeasureReport.decoder
+
+                Nothing ->
+                    Cmd.none
             )
 
         ClickedErrorDialogClose ->
@@ -114,15 +126,11 @@ addReport report model =
             model
 
 
-loadReports base measureId =
-    let
-        url =
-            UrlBuilder.crossOrigin base [ "Measure", measureId ] []
-    in
+loadReports base measureUrl =
     FhirHttp.searchType CompletedLoadReports
         base
         "MeasureReport"
-        [ UrlBuilder.string "measure" url ]
+        [ UrlBuilder.string "measure" measureUrl ]
 
 
 decodeReports : Bundle -> List MeasureReport
@@ -137,8 +145,7 @@ decodeReports { entry } =
 
 
 type alias Config msg =
-    { ready : Bool
-    , onLibraryAssoc : msg
+    { onLibraryAssoc : msg
     , onReportClick : Id -> msg
     , onMsg : Msg -> msg
     }
@@ -153,47 +160,61 @@ view config model =
             , class "mdc-typography--headline5"
             ]
             [ text "Reports" ]
-        , case model.reports of
-            Loading.Loaded reports ->
-                if List.isEmpty reports then
-                    emptyListPlaceholder config
+        , case ( model.measureUrl, model.libraryRef ) of
+            ( Just _, Just _ ) ->
+                case model.reports of
+                    Loading.Loaded reports ->
+                        if List.isEmpty reports then
+                            emptyListPlaceholder config.onMsg
 
-                else
-                    div []
-                        [ viewReportList config.onReportClick reports
-                        , generateButton config.onMsg "Generate Another Report"
-                        ]
+                        else
+                            div []
+                                [ viewReportList config.onReportClick reports
+                                , generateButton config.onMsg
+                                ]
 
-            Loading.Loading ->
-                text ""
+                    Loading.Loading ->
+                        text ""
 
-            Loading.LoadingSlowly ->
-                text ""
+                    Loading.LoadingSlowly ->
+                        text ""
 
-            Loading.Failed _ ->
-                text "error"
+                    Loading.Failed _ ->
+                        text "error"
+
+            ( Nothing, _ ) ->
+                missingUrlMessage
+
+            ( _, Nothing ) ->
+                missingLibraryMessage config.onLibraryAssoc
         ]
 
 
-emptyListPlaceholder { ready, onLibraryAssoc, onMsg } =
-    div [ class "measure-report-panel__empty-placeholder" ] <|
-        if ready then
-            [ generateButton onMsg "Generate First Report"
-            ]
-
-        else
-            [ text "Please"
-            , textButton
-                { buttonConfig | onClick = Just onLibraryAssoc }
-                "associate"
-            , text "a library before generating a report."
-            ]
+missingUrlMessage =
+    div []
+        [ text "Please assign an URL to the measure before generating a report."
+        ]
 
 
-generateButton onMsg label =
+missingLibraryMessage onLibraryAssoc =
+    div []
+        [ text "Please"
+        , textButton
+            { buttonConfig | onClick = Just onLibraryAssoc }
+            "associate"
+        , text "a library before generating a report."
+        ]
+
+
+emptyListPlaceholder onMsg =
+    div [ class "measure-report-panel__empty-placeholder" ]
+        [ generateButton onMsg ]
+
+
+generateButton onMsg =
     outlinedButton
         { buttonConfig | onClick = Just (onMsg ClickedGenerate) }
-        label
+        "Generate First Report"
 
 
 viewReportList onReportClick reports =

@@ -4,6 +4,7 @@ module Fhir.Http exposing
     , delete
     , postBundle
     , postOperationInstance
+    , postOperationType
     , read
     , searchType
     , update
@@ -144,6 +145,30 @@ postOperationInstance toMsg base type_ id name params decoder =
         , body = Http.emptyBody
         , expect = expectJson toMsg decoder
         }
+
+
+postOperationType :
+    (Result Error a -> msg)
+    -> String
+    -> String
+    -> String
+    -> List QueryParameter
+    -> Decoder a
+    -> Cmd msg
+postOperationType toMsg base type_ name params decoder =
+    Http.post
+        { url = UrlBuilder.crossOrigin base [ type_, name ] []
+        , body = formBody params
+        , expect = expectJson toMsg decoder
+        }
+
+
+formBody : List QueryParameter -> Http.Body
+formBody =
+    UrlBuilder.toQuery
+        -- drop the question mark
+        >> String.dropLeft 1
+        >> Http.stringBody "application/x-www-form-urlencoded"
 
 
 expectJson : (Result Error a -> msg) -> Decoder a -> Http.Expect msg

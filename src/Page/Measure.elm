@@ -278,11 +278,7 @@ update msg model =
             )
 
         CompletedLoadMeasure (Ok measure) ->
-            let
-                ( data, cmd ) =
-                    loaded (Session.getBase model.session) model.measureId measure
-            in
-            ( { model | data = data }, cmd )
+            loaded measure model
 
         CompletedLoadMeasure (Err error) ->
             ( { model | data = Failed error }
@@ -291,10 +287,10 @@ update msg model =
 
         CompletedSaveMeasure (Ok measure) ->
             let
-                ( data, cmd ) =
-                    loaded (Session.getBase model.session) model.measureId measure
+                ( newModel, cmd ) =
+                    loaded measure model
             in
-            ( { model | data = data }
+            ( newModel
                 |> updatePopulationDialog PopulationDialog.doClose
                 |> updateStratifierDialog StratifierDialog.doClose
                 |> closeAssocLibraryDialog
@@ -440,23 +436,50 @@ updateAssocLibraryDialog f model =
     )
 
 
-loaded base measureId measure =
+{-| Returns a loaded model with freshly initialized Sidebar and ReportPanel.
+-}
+loaded : Measure -> Model -> ( Model, Cmd Msg )
+loaded measure model =
     let
+        base =
+            Session.getBase model.session
+
         ( sidebar, sidebarCmd ) =
             Sidebar.init base measure
 
         ( reportPanel, reportPanelCmd ) =
-            ReportPanel.init base measureId
+            case model.data of
+                Loaded data ->
+                    if
+                        data.measure.url
+                            /= measure.url
+                            || data.measure.library
+                            /= measure.library
+                    then
+                        ReportPanel.init base
+                            measure.url
+                            (List.head measure.library)
+
+                    else
+                        ( data.reportPanel, Cmd.none )
+
+                _ ->
+                    ReportPanel.init base
+                        measure.url
+                        (List.head measure.library)
     in
-    ( Loaded
-        { measure = measure
-        , header = Header.init measure.title measure.description
-        , sidebar = sidebar
-        , reportPanel = reportPanel
-        }
+    ( { model
+        | data =
+            Loaded
+                { measure = measure
+                , header = Header.init measure.title measure.description
+                , sidebar = sidebar
+                , reportPanel = reportPanel
+                }
+      }
     , Cmd.batch
-        [ sidebarCmd |> Cmd.map GotSidebarMsg
-        , reportPanelCmd |> Cmd.map GotReportPanelMsg
+        [ Cmd.map GotSidebarMsg sidebarCmd
+        , Cmd.map GotReportPanelMsg reportPanelCmd
         ]
     )
 
@@ -572,7 +595,7 @@ viewMeasure { measure, header, reportPanel } =
         [ layoutGridInner []
             ([ viewHeader header ]
                 ++ List.indexedMap viewGroup measure.group
-                ++ [ viewReportPanel measure reportPanel ]
+                ++ [ viewReportPanel reportPanel ]
             )
         ]
 
@@ -734,11 +757,10 @@ viewStratifier groupIdx stratifierIdx { code, description, component } =
         }
 
 
-viewReportPanel measure reportPanel =
+viewReportPanel reportPanel =
     let
         config =
-            { ready = not (List.isEmpty measure.library)
-            , onLibraryAssoc = ClickedLibraryAssoc
+            { onLibraryAssoc = ClickedLibraryAssoc
             , onReportClick = ClickedReport
             , onMsg = GotReportPanelMsg
             }
