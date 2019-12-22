@@ -2,9 +2,10 @@ module Page.Measure.Sidebar exposing (Model, Msg, init, update, view)
 
 import Component.Sidebar exposing (sidebar, sidebarConfig)
 import Component.Sidebar.Url as Url
-import Fhir.Measure exposing (Measure)
+import Fhir.Measure as Measure exposing (Measure)
 import Html exposing (Html)
 import Page.Measure.Sidebar.Library as Library
+import Page.Measure.Sidebar.Subject as Subject
 
 
 
@@ -14,6 +15,7 @@ import Page.Measure.Sidebar.Library as Library
 type alias Model =
     { measure : Measure
     , url : Url.Model
+    , subject : Subject.Model
     , library : Library.Model
     }
 
@@ -26,6 +28,7 @@ init base measure =
     in
     ( { measure = measure
       , url = Url.init measure.url
+      , subject = Subject.init (Measure.getSubjectCode measure)
       , library = library
       }
     , Cmd.map GotLibraryMsg cmd
@@ -38,6 +41,7 @@ init base measure =
 
 type Msg
     = GotUrlMsg Url.Msg
+    | GotSubjectMsg Subject.Msg
     | GotLibraryMsg Library.Msg
 
 
@@ -50,6 +54,13 @@ update msg model =
                     Url.update msg_ model.url
             in
             ( { model | url = url }, Cmd.map GotUrlMsg cmd )
+
+        GotSubjectMsg msg_ ->
+            let
+                ( subject, cmd ) =
+                    Subject.update msg_ model.subject
+            in
+            ( { model | subject = subject }, Cmd.map GotSubjectMsg cmd )
 
         GotLibraryMsg msg_ ->
             ( { model | library = Library.update msg_ model.library }
@@ -72,12 +83,9 @@ view : Config msg -> Model -> Html msg
 view config model =
     sidebar sidebarConfig
         [ viewUrl config model
+        , viewSubject config model
         , viewLibrary config model
         ]
-
-
-viewLibrary { onLibraryEdit } { library } =
-    Library.view { onEdit = onLibraryEdit } library
 
 
 viewUrl { onMsg, onSave } ({ measure } as model) =
@@ -86,3 +94,15 @@ viewUrl { onMsg, onSave } ({ measure } as model) =
         , onSave = \url -> onSave { measure | url = url }
         }
         model.url
+
+
+viewSubject { onMsg, onSave } ({ measure } as model) =
+    Subject.view
+        { onMsg = GotSubjectMsg >> onMsg
+        , onSave = \code -> onSave (Measure.setSubjectCode code measure)
+        }
+        model.subject
+
+
+viewLibrary { onLibraryEdit } { library } =
+    Library.view { onEdit = onLibraryEdit } library

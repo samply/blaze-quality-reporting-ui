@@ -5,9 +5,11 @@ module Fhir.Measure exposing
     , Stratifier
     , decoder
     , encode
+    , getSubjectCode
     , newStratifier
     , populationType
     , scoring
+    , setSubjectCode
     )
 
 import Fhir.CodeableConcept as CodeableConcept exposing (CodeableConcept)
@@ -80,6 +82,37 @@ newStratifier =
     , criteria = Just (Expression.cql Nothing)
     , component = []
     }
+
+
+getSubjectCode : Measure -> String
+getSubjectCode =
+    .subject >> Maybe.andThen getResourceTypeCode >> Maybe.withDefault "Patient"
+
+
+getResourceTypeCode =
+    CodeableConcept.getCodeOf "http://hl7.org/fhir/resource-types"
+
+
+setSubjectCode : String -> Measure -> Measure
+setSubjectCode code measure =
+    case measure.subject of
+        Just subject ->
+            { measure | subject = Just (setResourceTypeCode code subject) }
+
+        Nothing ->
+            { measure | subject = Just (subjectCodeableConcept code) }
+
+
+setResourceTypeCode =
+    CodeableConcept.setCodeOf "http://hl7.org/fhir/resource-types"
+
+
+subjectCodeableConcept code =
+    CodeableConcept.ofOneCoding
+        { system = Just "http://hl7.org/fhir/resource-types"
+        , version = Nothing
+        , code = Just code
+        }
 
 
 encode : Measure -> Value
