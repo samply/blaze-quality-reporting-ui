@@ -4,9 +4,22 @@ import Fhir.CodeableConcept exposing (CodeableConcept)
 import Fhir.Http as FhirHttp
 import Fhir.MeasureReport as MeasureReport exposing (MeasureReport)
 import Fhir.PrimitiveTypes exposing (Id)
-import Html exposing (Html, div, h3, p, table, tbody, td, text, th, thead, tr)
+import Html exposing (Html, div, h3, p, text)
 import Html.Attributes exposing (class)
 import Loading exposing (Status(..))
+import Material.DataTable
+    exposing
+        ( DataTableRow
+        , dataTable
+        , dataTableCell
+        , dataTableCellConfig
+        , dataTableConfig
+        , dataTableHeaderCell
+        , dataTableHeaderCellConfig
+        , dataTableHeaderRow
+        , dataTableRow
+        , dataTableRowConfig
+        )
 import Material.List exposing (ListItem, list, listConfig, listItem, listItemConfig)
 import NaturalOrdering
 import Session exposing (Session)
@@ -148,7 +161,8 @@ viewStratifier groupIdx stratifierIdx stratifier =
             List.filterMap .text stratifier.code
 
         headerCell codeText =
-            th [ class "mdc-data-table__header-cell" ]
+            dataTableHeaderCell
+                dataTableHeaderCellConfig
                 [ text codeText ]
     in
     div [ class "measure-report-stratifier" ]
@@ -156,33 +170,29 @@ viewStratifier groupIdx stratifierIdx stratifier =
             [ h3 [ class "mdc-typography--headline6" ]
                 [ text (stratifierTitle stratifier.code) ]
             ]
-        , div [ class "mdc-data-table" ]
-            [ table [ class "mdc-data-table__table" ]
-                [ thead []
-                    [ tr [ class "mdc-data-table__header-row" ] <|
-                        List.map headerCell codeTexts
-                            ++ [ th
-                                    [ class "mdc-data-table__header-cell"
-                                    , class "mdc-data-table__header-cell--numeric"
-                                    ]
-                                    [ text "Count" ]
-                               ]
-                    ]
-                , tbody [ class "mdc-data-table_content" ]
-                    (List.map (viewStratum codeTexts)
-                        (List.sortWith
-                            (NaturalOrdering.compareOn
-                                (\stratum ->
-                                    codeTexts
-                                        |> List.map (stratumValue stratum)
-                                        |> String.join " "
-                                )
-                            )
-                            stratifier.stratum
-                        )
-                    )
+        , dataTable
+            dataTableConfig
+            { thead =
+                [ dataTableHeaderRow [] <|
+                    List.map headerCell codeTexts
+                        ++ [ dataTableHeaderCell
+                                { dataTableHeaderCellConfig | numeric = True }
+                                [ text "Count" ]
+                           ]
                 ]
-            ]
+            , tbody =
+                List.map (viewStratum codeTexts)
+                    (List.sortWith
+                        (NaturalOrdering.compareOn
+                            (\stratum ->
+                                codeTexts
+                                    |> List.map (stratumValue stratum)
+                                    |> String.join " "
+                            )
+                        )
+                        stratifier.stratum
+                    )
+            }
         ]
 
 
@@ -208,21 +218,18 @@ stratumValue stratum codeText =
             |> Maybe.withDefault "<unknown>"
 
 
-viewStratum : List String -> MeasureReport.Stratum -> Html Msg
+viewStratum : List String -> MeasureReport.Stratum -> DataTableRow Msg
 viewStratum codeTexts stratum =
     let
         valueCell codeText =
-            td [ class "mdc-data-table__cell" ]
+            dataTableCell dataTableCellConfig
                 [ text (stratumValue stratum codeText) ]
 
         countCell population =
-            td
-                [ class "mdc-data-table__cell"
-                , class "mdc-data-table__cell--numeric"
-                ]
+            dataTableCell { dataTableCellConfig | numeric = True }
                 [ population.count |> countToString |> text ]
     in
-    tr [ class "mdc-data-table__row" ]
+    dataTableRow dataTableRowConfig
         (List.map valueCell codeTexts
             ++ List.map countCell stratum.population
         )
