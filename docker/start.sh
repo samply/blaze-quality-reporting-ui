@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
 mkdir -p "/usr/share/nginx/html${CONTEXT_PATH:-}"
 
