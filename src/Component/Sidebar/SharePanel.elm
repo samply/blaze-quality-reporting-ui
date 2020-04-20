@@ -1,16 +1,9 @@
 module Component.Sidebar.SharePanel exposing (Model, Msg, init, update, view)
 
-import Component.Sidebar
-    exposing
-        ( SidebarEntry
-        , sidebarEntry
-        , sidebarEntryConfig
-        , sidebarEntryContent
-        , sidebarEntryTitle
-        )
+import Component.Sidebar.Entry as SidebarEntry exposing (SidebarEntry)
 import Component.Sidebar.SharePanel.CopyToServerDialog as CopyToServerDialog
 import Html exposing (text)
-import Material.IconButton exposing (iconButton, iconButtonConfig)
+import Material.IconButton as IconButton
 import Session exposing (Server)
 
 
@@ -69,14 +62,14 @@ type alias Config msg =
 
 view : Config msg -> Model -> SidebarEntry msg
 view { servers, onMsg, onCopyToServer } { copyToServerDialog } =
-    sidebarEntry sidebarEntryConfig
+    SidebarEntry.view SidebarEntry.config
         [ viewCopyToServerDialog servers onMsg onCopyToServer copyToServerDialog
-        , sidebarEntryTitle []
+        , SidebarEntry.title []
             [ text "Share"
             ]
-        , sidebarEntryContent []
-            [ iconButton
-                { iconButtonConfig | onClick = Just (onMsg ClickedCopyToServer) }
+        , SidebarEntry.content []
+            [ IconButton.iconButton
+                (IconButton.config |> IconButton.setOnClick (onMsg ClickedCopyToServer))
                 "share"
             ]
         ]

@@ -10,18 +10,13 @@ import Html exposing (Html, div, h3, h4, h5, li, p, text, ul)
 import Html.Attributes exposing (class)
 import Json.Decode exposing (decodeValue)
 import Loading
-import Material.Button exposing (buttonConfig, outlinedButton, textButton)
-import Material.Dialog exposing (dialog, dialogConfig)
-import Material.Icon exposing (icon, iconConfig)
-import Material.LayoutGrid exposing (layoutGridCell, span12)
-import Material.List
-    exposing
-        ( list
-        , listConfig
-        , listItem
-        , listItemConfig
-        , listItemGraphic
-        )
+import Material.Button as Button
+import Material.Dialog as Dialog
+import Material.Icon as Icon
+import Material.LayoutGrid as LayoutGrid exposing (span12)
+import Material.List as List
+import Material.List.Item as ListItem
+import MaterialUtil
 import Maybe.Extra as MaybeExtra
 import Url.Builder as UrlBuilder
 
@@ -147,15 +142,15 @@ decodeReports { entry } =
 
 
 type alias Config msg =
-    { onLibraryAssoc : msg
+    { onMsg : Msg -> msg
+    , onLibraryAssoc : msg
     , onReportClick : Id -> msg
-    , onMsg : Msg -> msg
     }
 
 
 view : Config msg -> Model -> Html msg
 view config model =
-    layoutGridCell [ span12, class "measure-report-panel" ]
+    LayoutGrid.cell [ span12, class "measure-report-panel" ]
         [ viewErrorDialog model.error |> Html.map config.onMsg
         , h3
             [ class "measure-report-panel__title"
@@ -201,8 +196,8 @@ missingUrlMessage =
 missingLibraryMessage onLibraryAssoc =
     div []
         [ text "Please"
-        , textButton
-            { buttonConfig | onClick = Just onLibraryAssoc }
+        , Button.text
+            (Button.config |> Button.setOnClick onLibraryAssoc)
             "associate"
         , text "a library before generating a report."
         ]
@@ -214,29 +209,29 @@ emptyListPlaceholder onMsg =
 
 
 generateButton onMsg =
-    outlinedButton
-        { buttonConfig | onClick = Just (onMsg ClickedGenerate) }
+    Button.outlined
+        (Button.config |> Button.setOnClick (onMsg ClickedGenerate))
         "Generate First Report"
 
 
 viewReportList onReportClick reports =
-    list listConfig <|
+    List.list List.config <|
         List.map (viewReport onReportClick) reports
 
 
 viewReport onReportClick ({ status, date } as report) =
-    listItem
-        { listItemConfig
-            | onClick = Maybe.map (\id -> onReportClick id) report.id
-            , disabled = MaybeExtra.isNothing report.id
-        }
-        [ listItemGraphic [] [ statusIcon status ]
+    ListItem.listItem
+        (ListItem.config
+            |> MaterialUtil.liftMaybe ListItem.setOnClick (Maybe.map onReportClick report.id)
+            |> ListItem.setDisabled (MaybeExtra.isNothing report.id)
+        )
+        [ ListItem.graphic [] [ statusIcon status ]
         , text (Maybe.withDefault "<unknown-date>" date)
         ]
 
 
 statusIcon status =
-    icon iconConfig
+    Icon.icon []
         (case status of
             Complete ->
                 "done"
@@ -250,20 +245,14 @@ statusIcon status =
 
 
 viewErrorDialog error =
-    dialog
-        { dialogConfig
-            | open = MaybeExtra.isJust error
-            , onClose = Just ClickedErrorDialogClose
-        }
+    Dialog.dialog
+        (Dialog.config
+            |> Dialog.setOpen (MaybeExtra.isJust error)
+            |> Dialog.setOnClose ClickedErrorDialogClose
+        )
         { title = Just "Error"
         , content = error |> Maybe.map errorDialogContent |> Maybe.withDefault []
-        , actions =
-            [ textButton
-                { buttonConfig
-                    | onClick = Just ClickedErrorDialogClose
-                }
-                "Ok"
-            ]
+        , actions = [ errorDialogOkButton ]
         }
 
 
@@ -313,3 +302,9 @@ issueTitle issueType =
 
         _ ->
             "Other error"
+
+
+errorDialogOkButton =
+    Button.text
+        (Button.config |> Button.setOnClick ClickedErrorDialogClose)
+        "Ok"

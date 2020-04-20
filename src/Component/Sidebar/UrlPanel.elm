@@ -10,23 +10,13 @@ the onSave action can be supplied to the ['view'](#view) function.
 
 -}
 
-import Component.Sidebar
-    exposing
-        ( SidebarEntry
-        , sidebarEditButton
-        , sidebarEditButtonConfig
-        , sidebarEntry
-        , sidebarEntryActionButtons
-        , sidebarEntryConfig
-        , sidebarEntryContent
-        , sidebarEntryTitle
-        )
+import Component.Sidebar.Entry as SidebarEntry exposing (SidebarEntry)
 import Events
 import Fhir.PrimitiveTypes exposing (Uri)
 import Html exposing (text)
 import Html.Attributes exposing (class)
-import Material.Button exposing (buttonConfig, outlinedButton, unelevatedButton)
-import Material.TextField exposing (textField, textFieldConfig)
+import Material.Button as Button
+import Material.TextField as TextField
 
 
 
@@ -84,38 +74,37 @@ type alias Config msg =
 
 
 view : Config msg -> Model -> SidebarEntry msg
-view { onMsg, onSave } { enteredUrl, edit } =
-    sidebarEntry
-        { sidebarEntryConfig | additionalAttributes = [ class "url-panel" ] }
-        [ sidebarEntryTitle []
+view { onMsg, onSave } { originalUrl, enteredUrl, edit } =
+    SidebarEntry.view
+        (SidebarEntry.config |> SidebarEntry.setAttributes [ class "url-panel" ])
+        [ SidebarEntry.title []
             [ text "URL"
-            , sidebarEditButton
-                { sidebarEditButtonConfig | onClick = Just (onMsg ClickedEdit) }
+            , SidebarEntry.editButton
+                (Button.config |> Button.setOnClick (onMsg ClickedEdit))
             ]
-        , sidebarEntryContent [] <|
+        , SidebarEntry.content [] <|
             if edit then
-                [ textField
-                    { textFieldConfig
-                        | value = enteredUrl |> Maybe.withDefault ""
-                        , onInput = Just (EnteredUrl >> onMsg)
-                        , outlined = True
-                        , additionalAttributes =
+                [ TextField.outlined
+                    (TextField.config
+                        |> TextField.setValue enteredUrl
+                        |> TextField.setOnInput (EnteredUrl >> onMsg)
+                        |> TextField.setAttributes
                             [ Events.onEnterEsc
                                 (onSave enteredUrl)
                                 (onMsg ClickedCancel)
                             ]
-                    }
+                    )
                 ]
 
             else
-                [ enteredUrl |> Maybe.withDefault "<not-specified>" |> text ]
-        , sidebarEntryActionButtons [] <|
+                [ originalUrl |> Maybe.withDefault "<not-specified>" |> text ]
+        , SidebarEntry.actionButtons [] <|
             if edit then
-                [ unelevatedButton
-                    { buttonConfig | onClick = Just (onSave enteredUrl) }
+                [ Button.unelevated
+                    (Button.config |> Button.setOnClick (onSave enteredUrl))
                     "save"
-                , outlinedButton
-                    { buttonConfig | onClick = Just (onMsg ClickedCancel) }
+                , Button.outlined
+                    (Button.config |> Button.setOnClick (onMsg ClickedCancel))
                     "cancel"
                 ]
 

@@ -14,8 +14,9 @@ import Fhir.Measure.Stratifier exposing (newComponent)
 import Html exposing (Html)
 import Html.Attributes exposing (class)
 import List.Extra exposing (removeAt, updateAt)
-import Material.Button exposing (buttonConfig, textButton)
-import Material.Dialog exposing (dialog, dialogConfig)
+import Material.Button as Button
+import Material.Dialog as Dialog
+import MaterialUtil
 import Maybe.Extra as MaybeExtra
 import Page.Measure.StratifierDialog.ComponentForm as ComponentForm
 
@@ -142,26 +143,26 @@ view { onMsg, onSave } model =
         onSave_ =
             MaybeExtra.andMap (toStratifier componentForms) onSave
     in
-    dialog
-        { dialogConfig
-            | open = isOpen model
-            , onClose = Just (onMsg ClickedClose)
-            , additionalAttributes = [ class "measure-stratifier-dialog" ]
-        }
+    Dialog.dialog
+        (Dialog.config
+            |> Dialog.setOpen (isOpen model)
+            |> Dialog.setOnClose (onMsg ClickedClose)
+            |> Dialog.setAttributes [ class "measure-stratifier-dialog" ]
+        )
         { title = Just "Stratifier"
         , content =
             List.indexedMap (viewComponentForm onMsg onSave_ (List.length componentForms - 1)) componentForms
         , actions =
-            [ textButton
-                { buttonConfig
-                    | onClick = Just (onMsg ClickedClose)
-                }
+            [ Button.text
+                (Button.config
+                    |> Button.setOnClick (onMsg ClickedClose)
+                )
                 "Cancel"
-            , textButton
-                { buttonConfig
-                    | onClick = onSave_
-                    , disabled = not (isValid model)
-                }
+            , Button.text
+                (Button.config
+                    |> MaterialUtil.liftMaybe Button.setOnClick onSave_
+                    |> Button.setDisabled (not (isValid model))
+                )
                 "Save"
             ]
         }

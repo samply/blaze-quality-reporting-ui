@@ -3,21 +3,11 @@ module Page.Measure.Sidebar.Subject exposing (Model, Msg, init, update, view)
 {-| This component is the subject input box in the sidebar.
 -}
 
-import Component.Sidebar
-    exposing
-        ( SidebarEntry
-        , sidebarEditButton
-        , sidebarEditButtonConfig
-        , sidebarEntry
-        , sidebarEntryActionButtons
-        , sidebarEntryConfig
-        , sidebarEntryContent
-        , sidebarEntryTitle
-        )
+import Component.Sidebar.Entry as SidebarEntry exposing (SidebarEntry)
 import Events exposing (onEnterEsc)
 import Html exposing (text)
-import Material.Button exposing (buttonConfig, outlinedButton, unelevatedButton)
-import Material.TextField exposing (textField, textFieldConfig)
+import Material.Button as Button
+import Material.TextField as TextField
 
 
 
@@ -26,7 +16,7 @@ import Material.TextField exposing (textField, textFieldConfig)
 
 type alias Model =
     { originalSubject : String
-    , enteredSubject : String
+    , enteredSubject : Maybe String
     , edit : Bool
     }
 
@@ -34,7 +24,7 @@ type alias Model =
 init : String -> Model
 init subject =
     { originalSubject = subject
-    , enteredSubject = subject
+    , enteredSubject = Just subject
     , edit = False
     }
 
@@ -56,12 +46,15 @@ update msg model =
             ( { model | edit = True }, Cmd.none )
 
         ClickedCancel ->
-            ( { model | enteredSubject = model.originalSubject, edit = False }
+            ( { model
+                | enteredSubject = Just model.originalSubject
+                , edit = False
+              }
             , Cmd.none
             )
 
-        EnteredSubject s ->
-            ( { model | enteredSubject = s }, Cmd.none )
+        EnteredSubject subject ->
+            ( { model | enteredSubject = Just subject }, Cmd.none )
 
 
 
@@ -70,42 +63,42 @@ update msg model =
 
 type alias Config msg =
     { onMsg : Msg -> msg
-    , onSave : String -> msg
+    , onSave : Maybe String -> msg
     }
 
 
 view : Config msg -> Model -> SidebarEntry msg
-view { onMsg, onSave } { enteredSubject, edit } =
-    sidebarEntry sidebarEntryConfig
-        [ sidebarEntryTitle []
+view { onMsg, onSave } { originalSubject, enteredSubject, edit } =
+    SidebarEntry.view SidebarEntry.config
+        [ SidebarEntry.title []
             [ text "Subject"
-            , sidebarEditButton
-                { sidebarEditButtonConfig | onClick = Just (onMsg ClickedEdit) }
+            , SidebarEntry.editButton
+                (Button.config |> Button.setOnClick (onMsg ClickedEdit))
             ]
-        , sidebarEntryContent [] <|
+        , SidebarEntry.content [] <|
             if edit then
-                [ textField
-                    { textFieldConfig
-                        | value = enteredSubject
-                        , onInput = Just (EnteredSubject >> onMsg)
-                        , outlined = True
-                        , additionalAttributes =
+                [ TextField.outlined
+                    (TextField.config
+                        |> TextField.setValue enteredSubject
+                        |> TextField.setRequired True
+                        |> TextField.setOnInput (EnteredSubject >> onMsg)
+                        |> TextField.setAttributes
                             [ onEnterEsc
                                 (onSave enteredSubject)
                                 (onMsg ClickedCancel)
                             ]
-                    }
+                    )
                 ]
 
             else
-                [ text enteredSubject ]
-        , sidebarEntryActionButtons [] <|
+                [ text originalSubject ]
+        , SidebarEntry.actionButtons [] <|
             if edit then
-                [ unelevatedButton
-                    { buttonConfig | onClick = Just (onSave enteredSubject) }
+                [ Button.unelevated
+                    (Button.config |> Button.setOnClick (onSave enteredSubject))
                     "save"
-                , outlinedButton
-                    { buttonConfig | onClick = Just (onMsg ClickedCancel) }
+                , Button.outlined
+                    (Button.config |> Button.setOnClick (onMsg ClickedCancel))
                     "cancel"
                 ]
 

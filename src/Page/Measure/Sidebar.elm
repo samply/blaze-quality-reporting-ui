@@ -1,6 +1,6 @@
 module Page.Measure.Sidebar exposing (Model, Msg, init, update, view)
 
-import Component.Sidebar exposing (sidebar, sidebarConfig)
+import Component.Sidebar as Sidebar
 import Component.Sidebar.SharePanel as SharePanel
 import Component.Sidebar.UrlPanel as UrlPanel
 import Fhir.Measure as Measure exposing (Measure)
@@ -95,7 +95,7 @@ type alias Config msg =
 
 view : Config msg -> Model -> Html msg
 view config model =
-    sidebar sidebarConfig
+    Sidebar.view Sidebar.config
         [ viewSharePanel config model
         , viewUrlPanel config model
         , viewSubject config model

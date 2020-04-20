@@ -11,27 +11,12 @@ import Html exposing (Html, div, h2, text)
 import Html.Attributes exposing (class, classList)
 import Json.Encode exposing (encode)
 import List.Zipper as Zipper exposing (Zipper)
-import Material.Button exposing (buttonConfig)
-import Material.Card
-    exposing
-        ( card
-        , cardActionButton
-        , cardActions
-        , cardBlock
-        , cardConfig
-        )
-import Material.IconButton exposing (iconButton, iconButtonConfig)
-import Material.List
-    exposing
-        ( ListItem
-        , list
-        , listConfig
-        , listItem
-        , listItemConfig
-        , listItemGraphic
-        , listItemMeta
-        )
-import Material.Radio exposing (radio, radioConfig)
+import Material.Button as Button
+import Material.Card as Card
+import Material.IconButton as IconButton
+import Material.List as List
+import Material.List.Item as ListItem exposing (ListItem)
+import Material.Radio as Radio
 import NaturalOrdering
 import Page.Settings.ServerDialog as ServerDialog
 import Ports
@@ -241,29 +226,29 @@ viewServerDialog model =
 
 serverListCard : Zipper Server -> Html Msg
 serverListCard servers =
-    card
-        { cardConfig
-            | outlined = True
-            , additionalAttributes = [ class "settings-server-list-card" ]
-        }
+    Card.card
+        (Card.config
+            |> Card.setOutlined True
+            |> Card.setAttributes [ class "settings-server-list-card" ]
+        )
         { blocks =
-            [ cardBlock <|
+            [ Card.block <|
                 div [ class "settings-server-list-card__header" ]
                     [ h2 [ class "mdc-typography--headline6" ]
                         [ text "Servers" ]
                     ]
-            , cardBlock <|
+            , Card.block <|
                 div [ class "settings-server-list-card__body" ]
                     [ serverList servers ]
             ]
         , actions =
             Just <|
-                cardActions
+                Card.actions
                     { buttons =
-                        [ cardActionButton
-                            { buttonConfig
-                                | onClick = Just ClickedAddServer
-                            }
+                        [ Card.button
+                            (Button.config
+                                |> Button.setOnClick ClickedAddServer
+                            )
                             "add"
                         ]
                     , icons = []
@@ -273,7 +258,7 @@ serverListCard servers =
 
 serverList : Zipper Server -> Html Msg
 serverList servers =
-    list listConfig <|
+    List.list List.config <|
         List.map serverListItem (toMarkedList servers)
 
 
@@ -286,29 +271,33 @@ toMarkedList zipper =
 
 serverListItem : ( Bool, Server ) -> ListItem Msg
 serverListItem ( active, { name } as server ) =
-    listItem
-        { listItemConfig
-            | additionalAttributes =
+    ListItem.listItem
+        (ListItem.config
+            |> ListItem.setAttributes
                 [ classList [ ( "settings-server-list-item--active", active ) ] ]
-        }
-        [ listItemGraphic []
-            [ radio
-                { radioConfig
-                    | checked = active
-                    , onChange = Just (ClickedServer name)
-                }
+        )
+        [ ListItem.graphic []
+            [ Radio.radio
+                (Radio.config
+                    |> Radio.setChecked active
+                    |> Radio.setOnChange (ClickedServer name)
+                )
             ]
         , text name
-        , listItemMeta []
-            [ iconButton
-                { iconButtonConfig | onClick = Just (ClickedServerEdit server) }
+        , ListItem.meta []
+            [ IconButton.iconButton
+                (IconButton.config
+                    |> IconButton.setOnClick (ClickedServerEdit server)
+                )
                 "edit"
             , if active then
                 text ""
 
               else
-                iconButton
-                    { iconButtonConfig | onClick = Just (ClickedServerDelete name) }
+                IconButton.iconButton
+                    (IconButton.config
+                        |> IconButton.setOnClick (ClickedServerDelete name)
+                    )
                     "delete"
             ]
         ]
