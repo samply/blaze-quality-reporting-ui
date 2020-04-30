@@ -1,9 +1,11 @@
 module Page.Library.Sidebar exposing (Model, Msg, init, update, view)
 
 import Component.Sidebar exposing (sidebar, sidebarConfig)
-import Component.Sidebar.Url as Url
+import Component.Sidebar.SharePanel as SharePanel
+import Component.Sidebar.UrlPanel as UrlPanel
 import Fhir.Library exposing (Library)
 import Html exposing (Html)
+import Session exposing (Server)
 
 
 
@@ -12,14 +14,16 @@ import Html exposing (Html)
 
 type alias Model =
     { library : Library
-    , url : Url.Model
+    , sharePanel : SharePanel.Model
+    , urlPanel : UrlPanel.Model
     }
 
 
 init : Library -> Model
 init library =
     { library = library
-    , url = Url.init library.url
+    , sharePanel = SharePanel.init
+    , urlPanel = UrlPanel.init library.url
     }
 
 
@@ -28,18 +32,26 @@ init library =
 
 
 type Msg
-    = GotUrlMsg Url.Msg
+    = GotShareMsg SharePanel.Msg
+    | GotUrlMsg UrlPanel.Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        GotShareMsg msg_ ->
+            let
+                ( share, cmd ) =
+                    SharePanel.update msg_ model.sharePanel
+            in
+            ( { model | sharePanel = share }, Cmd.map GotShareMsg cmd )
+
         GotUrlMsg msg_ ->
             let
                 ( url, cmd ) =
-                    Url.update msg_ model.url
+                    UrlPanel.update msg_ model.urlPanel
             in
-            ( { model | url = url }, Cmd.map GotUrlMsg cmd )
+            ( { model | urlPanel = url }, Cmd.map GotUrlMsg cmd )
 
 
 
@@ -47,20 +59,33 @@ update msg model =
 
 
 type alias Config msg =
-    { onMsg : Msg -> msg
+    { servers : List Server
+    , onMsg : Msg -> msg
     , onSave : Library -> msg
+    , onCopyToServer : Server -> msg
     }
 
 
 view : Config msg -> Model -> Html msg
 view config model =
     sidebar sidebarConfig
-        [ viewUrl config model ]
+        [ viewSharePanel config model
+        , viewUrlPanel config model
+        ]
 
 
-viewUrl { onMsg, onSave } ({ library } as model) =
-    Url.view
+viewSharePanel { servers, onMsg, onCopyToServer } { sharePanel } =
+    SharePanel.view
+        { servers = servers
+        , onMsg = GotShareMsg >> onMsg
+        , onCopyToServer = onCopyToServer
+        }
+        sharePanel
+
+
+viewUrlPanel { onMsg, onSave } { library, urlPanel } =
+    UrlPanel.view
         { onMsg = GotUrlMsg >> onMsg
         , onSave = \url -> onSave { library | url = url }
         }
-        model.url
+        urlPanel

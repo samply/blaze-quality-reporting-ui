@@ -1,4 +1,4 @@
-module Component.Sidebar.Url exposing (Model, Msg, init, update, view)
+module Component.Sidebar.UrlPanel exposing (Model, Msg, init, update, view)
 
 {-| This component is a canonical URL input box in the sidebar.
 
@@ -21,7 +21,7 @@ import Component.Sidebar
         , sidebarEntryContent
         , sidebarEntryTitle
         )
-import Events exposing (onEnterEsc)
+import Events
 import Fhir.PrimitiveTypes exposing (Uri)
 import Html exposing (text)
 import Material.Button exposing (buttonConfig, outlinedButton, unelevatedButton)
@@ -98,7 +98,7 @@ view { onMsg, onSave } { enteredUrl, edit } =
                         , onInput = Just (EnteredUrl >> onMsg)
                         , outlined = True
                         , additionalAttributes =
-                            [ onEnterEsc
+                            [ Events.onEnterEsc
                                 (onSave enteredUrl)
                                 (onMsg ClickedCancel)
                             ]

@@ -5,6 +5,7 @@ import Fhir.CodeableConcept as CodeableConcept exposing (CodeableConcept)
 import Fhir.Coding exposing (Coding)
 import Fhir.Encode exposing (object, optionalListPair, optionalPair, pair)
 import Fhir.PrimitiveTypes exposing (Id, Markdown, Uri)
+import Fhir.Reference as Reference exposing (Reference)
 import Json.Decode as Decode exposing (Decoder, list, maybe, string, succeed)
 import Json.Decode.Pipeline exposing (optional)
 import Json.Encode as Encode exposing (Value)
@@ -17,6 +18,8 @@ type alias Library =
     , title : Maybe String
     , status : Status
     , type_ : CodeableConcept
+    , subjectCodeableConcept : Maybe CodeableConcept
+    , subjectReference : Maybe Reference
     , description : Maybe Markdown
     , content : List Attachment
     }
@@ -47,6 +50,8 @@ encode library =
         , optionalPair "title" Encode.string library.title
         , pair "status" encodeStatus library.status
         , pair "type" CodeableConcept.encode library.type_
+        , optionalPair "subjectCodeableConcept" CodeableConcept.encode library.subjectCodeableConcept
+        , optionalPair "subjectReference" Reference.encode library.subjectReference
         , optionalPair "description" Encode.string library.description
         , optionalListPair "content" Attachment.encode library.content
         ]
@@ -76,6 +81,8 @@ decoder =
         |> optional "title" (maybe string) Nothing
         |> optional "status" statusDecoder Unknown
         |> optional "type" CodeableConcept.decoder CodeableConcept.empty
+        |> optional "subjectCodeableConcept" (maybe CodeableConcept.decoder) Nothing
+        |> optional "subjectReference" (maybe Reference.decoder) Nothing
         |> optional "description" (maybe string) Nothing
         |> optional "content" (list Attachment.decoder) []
 

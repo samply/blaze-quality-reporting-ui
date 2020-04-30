@@ -125,6 +125,10 @@ body {
   padding: 1rem;
 }
 
+.library-list-page__list .mdc-list {
+  margin-right: 56px;
+}
+
 .library-list-page__empty-placeholder {
   display: flex;
   justify-content: center;
@@ -142,6 +146,10 @@ body {
  */
 .measure-list-page {
   padding: 1rem;
+}
+
+.measure-list-page__list .mdc-list {
+  margin-right: 56px;
 }
 
 .measure-list-page__empty-placeholder {

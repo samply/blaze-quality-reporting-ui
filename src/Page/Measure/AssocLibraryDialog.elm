@@ -34,6 +34,10 @@ import Task
 import Url.Builder as UrlBuilder
 
 
+
+-- MODEL
+
+
 type Model
     = Closed { base : String }
     | Open
@@ -45,6 +49,10 @@ type Model
 
 init base =
     Closed { base = base }
+
+
+
+-- UPDATE
 
 
 type Msg
@@ -126,6 +134,10 @@ decodeLibraries { entry } =
     List.filterMap
         (.resource >> decodeValue Library.decoder >> Result.toMaybe)
         entry
+
+
+
+-- VIEW
 
 
 type alias Config msg =

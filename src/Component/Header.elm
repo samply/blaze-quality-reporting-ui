@@ -1,5 +1,6 @@
 module Component.Header exposing (Model, Msg, init, update, view)
 
+import Events
 import Html exposing (..)
 import Html.Attributes exposing (class, classList)
 import Material.Button exposing (buttonConfig, outlinedButton, unelevatedButton)
@@ -15,7 +16,9 @@ import Material.TextField exposing (textField, textFieldConfig)
 
 type alias Model =
     { title : Maybe String
+    , enteredTitle : Maybe String
     , description : Maybe String
+    , enteredDescription : Maybe String
     , edit : Bool
     }
 
@@ -23,7 +26,9 @@ type alias Model =
 init : Maybe String -> Maybe String -> Model
 init title description =
     { title = title
+    , enteredTitle = title
     , description = description
+    , enteredDescription = description
     , edit = False
     }
 
@@ -46,13 +51,17 @@ update msg model =
             { model | edit = True }
 
         EnteredTitle title ->
-            { model | title = blankToNothing title }
+            { model | enteredTitle = blankToNothing title }
 
         EnteredDescription description ->
-            { model | description = blankToNothing description }
+            { model | enteredDescription = blankToNothing description }
 
         ClickedCancel ->
-            { model | edit = False }
+            { model
+                | enteredTitle = model.title
+                , enteredDescription = model.description
+                , edit = False
+            }
 
 
 blankToNothing s =
@@ -75,7 +84,7 @@ type alias Config msg =
 
 
 view : Config msg -> Model -> Html msg
-view { onSave, onDelete, onMsg } { title, description, edit } =
+view { onSave, onDelete, onMsg } { title, enteredTitle, description, enteredDescription, edit } =
     layoutGridCell
         [ class "measure-header"
         , span12
@@ -86,9 +95,14 @@ view { onSave, onDelete, onMsg } { title, description, edit } =
             (if edit then
                 [ textField
                     { textFieldConfig
-                        | value = Maybe.withDefault "" title
+                        | value = Maybe.withDefault "" enteredTitle
                         , outlined = True
                         , onInput = Just (EnteredTitle >> onMsg)
+                        , additionalAttributes =
+                            [ Events.onEnterEsc
+                                (onSave enteredTitle enteredDescription)
+                                (onMsg ClickedCancel)
+                            ]
                     }
                 ]
 
@@ -105,7 +119,7 @@ view { onSave, onDelete, onMsg } { title, description, edit } =
                     [ div [ class "measure-header__description" ]
                         [ textArea
                             { textAreaConfig
-                                | value = Maybe.withDefault "" description
+                                | value = Maybe.withDefault "" enteredDescription
                                 , fullwidth = True
                                 , onInput = Just (EnteredDescription >> onMsg)
                             }
@@ -113,7 +127,7 @@ view { onSave, onDelete, onMsg } { title, description, edit } =
                     , div [ class "measure-header__action-buttons" ]
                         [ unelevatedButton
                             { buttonConfig
-                                | onClick = Just (onSave title description)
+                                | onClick = Just (onSave enteredTitle enteredDescription)
                             }
                             "Save"
                         , div [ class "measure-header__action-buttons-right" ]
