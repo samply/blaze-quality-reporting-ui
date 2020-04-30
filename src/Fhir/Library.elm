@@ -6,7 +6,7 @@ import Fhir.Coding exposing (Coding)
 import Fhir.Encode exposing (object, optionalListPair, optionalPair, pair)
 import Fhir.PrimitiveTypes exposing (Id, Markdown, Uri)
 import Json.Decode as Decode exposing (Decoder, list, maybe, string, succeed)
-import Json.Decode.Pipeline exposing (optional, required)
+import Json.Decode.Pipeline exposing (optional)
 import Json.Encode as Encode exposing (Value)
 
 
@@ -75,7 +75,7 @@ decoder =
         |> optional "name" (maybe string) Nothing
         |> optional "title" (maybe string) Nothing
         |> optional "status" statusDecoder Unknown
-        |> required "type" CodeableConcept.decoder
+        |> optional "type" CodeableConcept.decoder CodeableConcept.empty
         |> optional "description" (maybe string) Nothing
         |> optional "content" (list Attachment.decoder) []
 

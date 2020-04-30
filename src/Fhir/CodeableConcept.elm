@@ -1,6 +1,7 @@
 module Fhir.CodeableConcept exposing
     ( CodeableConcept
     , decoder
+    , empty
     , encode
     , getCodeOf
     , ofOneCoding
@@ -18,6 +19,13 @@ type alias CodeableConcept =
     { coding : List Coding
     , text : Maybe String
     }
+
+
+{-| Returns an empty CodeableConcept without any codings and no text.
+-}
+empty : CodeableConcept
+empty =
+    { coding = [], text = Nothing }
 
 
 ofOneCoding : Coding -> CodeableConcept
