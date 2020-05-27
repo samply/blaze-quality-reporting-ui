@@ -10,7 +10,7 @@ Please be aware that your browser might not allow to access a Blaze server over 
 
 Start the container:
 ```
-docker run -p 8000:80 samply/blaze-quality-reporting-ui:0.5.0
+docker run -p 8000:80 samply/blaze-quality-reporting-ui:0.6.0
 ```
 
 Open in your browser:
