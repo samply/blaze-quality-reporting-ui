@@ -1,11 +1,13 @@
 module Page.Measure.Sidebar exposing (Model, Msg, init, update, view)
 
 import Component.Sidebar exposing (sidebar, sidebarConfig)
+import Component.Sidebar.SharePanel as SharePanel
 import Component.Sidebar.UrlPanel as UrlPanel
 import Fhir.Measure as Measure exposing (Measure)
 import Html exposing (Html)
 import Page.Measure.Sidebar.Library as Library
 import Page.Measure.Sidebar.Subject as Subject
+import Session exposing (Server)
 
 
 
@@ -14,6 +16,7 @@ import Page.Measure.Sidebar.Subject as Subject
 
 type alias Model =
     { measure : Measure
+    , sharePanel : SharePanel.Model
     , urlPanel : UrlPanel.Model
     , subject : Subject.Model
     , library : Library.Model
@@ -27,6 +30,7 @@ init base measure =
             Library.init base (List.head measure.library)
     in
     ( { measure = measure
+      , sharePanel = SharePanel.init
       , urlPanel = UrlPanel.init measure.url
       , subject = Subject.init (Measure.getSubjectCode measure)
       , library = library
@@ -40,7 +44,8 @@ init base measure =
 
 
 type Msg
-    = GotUrlMsg UrlPanel.Msg
+    = GotShareMsg SharePanel.Msg
+    | GotUrlMsg UrlPanel.Msg
     | GotSubjectMsg Subject.Msg
     | GotLibraryMsg Library.Msg
 
@@ -48,6 +53,13 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        GotShareMsg msg_ ->
+            let
+                ( share, cmd ) =
+                    SharePanel.update msg_ model.sharePanel
+            in
+            ( { model | sharePanel = share }, Cmd.map GotShareMsg cmd )
+
         GotUrlMsg msg_ ->
             let
                 ( url, cmd ) =
@@ -73,19 +85,31 @@ update msg model =
 
 
 type alias Config msg =
-    { onMsg : Msg -> msg
+    { servers : List Server
+    , onMsg : Msg -> msg
     , onSave : Measure -> msg
     , onLibraryEdit : msg
+    , onCopyToServer : Server -> msg
     }
 
 
 view : Config msg -> Model -> Html msg
 view config model =
     sidebar sidebarConfig
-        [ viewUrlPanel config model
+        [ viewSharePanel config model
+        , viewUrlPanel config model
         , viewSubject config model
         , viewLibrary config model
         ]
+
+
+viewSharePanel { servers, onMsg, onCopyToServer } { sharePanel } =
+    SharePanel.view
+        { servers = servers
+        , onMsg = GotShareMsg >> onMsg
+        , onCopyToServer = onCopyToServer
+        }
+        sharePanel
 
 
 viewUrlPanel { onMsg, onSave } { measure, urlPanel } =

@@ -253,13 +253,7 @@ view model =
             , content =
                 div [ class "main-content library-page" ]
                     [ viewLibrary data
-                    , Sidebar.view
-                        { servers = Zipper.toList model.session.servers
-                        , onMsg = GotSidebarMsg
-                        , onSave = ClickedSidebarSave
-                        , onCopyToServer = ClickedSidebarCopyToServer
-                        }
-                        data.sidebar
+                    , viewSidebar model.session data.sidebar
                     ]
             }
 
@@ -308,6 +302,17 @@ viewCqlPanel cqlPanel =
         , onMsg = GotCqlPanelMsg
         }
         cqlPanel
+
+
+viewSidebar : Session -> Sidebar.Model -> Html Msg
+viewSidebar session sidebar =
+    Sidebar.view
+        { servers = Zipper.toList session.servers
+        , onMsg = GotSidebarMsg
+        , onSave = ClickedSidebarSave
+        , onCopyToServer = ClickedSidebarCopyToServer
+        }
+        sidebar
 
 
 viewError : FhirHttp.Error -> Html Msg

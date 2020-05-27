@@ -10,6 +10,7 @@ import Html exposing (Html, div, h3, h4, text)
 import Html.Attributes exposing (class)
 import Http
 import List.Extra exposing (getAt, removeAt, setAt, updateAt)
+import List.Zipper as Zipper
 import Loading exposing (Status(..))
 import Material.Button exposing (buttonConfig, outlinedButton)
 import Material.Card
@@ -34,7 +35,7 @@ import Page.Measure.ReportPanel as ReportPanel
 import Page.Measure.Sidebar as Sidebar
 import Page.Measure.StratifierDialog as StratifierDialog
 import Route
-import Session exposing (Session)
+import Session exposing (Server, Session)
 
 
 
@@ -95,6 +96,7 @@ type Msg
     | ClickedLibraryAssoc
     | ClickedSidebarLibraryEdit
     | ClickedSidebarSave Measure
+    | ClickedSidebarCopyToServer Server
     | ClickedPopulationSaveAtUpdate Int Int Measure.Population
     | ClickedStratifierSaveAtAdd Int Measure.Stratifier
     | ClickedStratifierSaveAtUpdate Int Int Measure.Stratifier
@@ -102,6 +104,7 @@ type Msg
     | SelectedLibrary Library
     | CompletedLoadMeasure (Result FhirHttp.Error Measure)
     | CompletedSaveMeasure (Result FhirHttp.Error Measure)
+    | CompletedDuplicateMeasure (Result FhirHttp.Error Measure)
     | CompletedDeleteMeasure (Result Http.Error ())
     | GotPopulationDialogMsg PopulationDialog.Msg
     | GotStratifierDialogMsg StratifierDialog.Msg
@@ -225,6 +228,16 @@ update msg model =
             , saveMeasure (Session.getBase model.session) model.measureId measure
             )
 
+        ClickedSidebarCopyToServer server ->
+            ( model
+            , case model.data of
+                Loaded { measure } ->
+                    duplicateMeasure server.url measure
+
+                _ ->
+                    Cmd.none
+            )
+
         ClickedPopulationSaveAtUpdate groupIdx populationIdx population ->
             ( model
             , doWithData
@@ -298,6 +311,21 @@ update msg model =
             )
 
         CompletedSaveMeasure (Err _) ->
+            ( model, Cmd.none )
+
+        CompletedDuplicateMeasure (Ok measure) ->
+            let
+                ( newModel, cmd ) =
+                    loaded measure model
+            in
+            ( newModel
+                |> updatePopulationDialog PopulationDialog.doClose
+                |> updateStratifierDialog StratifierDialog.doClose
+                |> closeAssocLibraryDialog
+            , cmd
+            )
+
+        CompletedDuplicateMeasure (Err _) ->
             ( model, Cmd.none )
 
         CompletedDeleteMeasure (Ok _) ->
@@ -497,6 +525,14 @@ saveMeasure base measureId measure =
         (Measure.encode measure)
 
 
+duplicateMeasure base measure =
+    FhirHttp.create CompletedDuplicateMeasure
+        base
+        "Measure"
+        Measure.decoder
+        (Measure.encode measure)
+
+
 deleteMeasure base measureId =
     FhirHttp.delete CompletedDeleteMeasure base "Measure" measureId
 
@@ -516,7 +552,7 @@ view model =
                     , viewStratifierDialog model
                     , viewAssocLibraryDialog model
                     , viewMeasure data
-                    , viewSidebar data.sidebar
+                    , viewSidebar model.session data.sidebar
                     ]
             }
 
@@ -579,12 +615,14 @@ viewAssocLibraryDialog model =
         model.assocLibraryDialog
 
 
-viewSidebar : Sidebar.Model -> Html Msg
-viewSidebar sidebar =
+viewSidebar : Session -> Sidebar.Model -> Html Msg
+viewSidebar session sidebar =
     Sidebar.view
-        { onMsg = GotSidebarMsg
+        { servers = Zipper.toList session.servers
+        , onMsg = GotSidebarMsg
         , onSave = ClickedSidebarSave
         , onLibraryEdit = ClickedSidebarLibraryEdit
+        , onCopyToServer = ClickedSidebarCopyToServer
         }
         sidebar
 
