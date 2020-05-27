@@ -16,4 +16,4 @@ format:
 review:
 	elm-review
 
-.PHONY: build, build-dev, format, review
+.PHONY: build build-dev format review

@@ -9,13 +9,14 @@ import Fhir.PrimitiveTypes exposing (Id)
 import Html exposing (..)
 import Html.Attributes exposing (class)
 import Http
+import List.Zipper as Zipper
 import Loading exposing (Status(..))
 import Material.LayoutGrid exposing (layoutGrid, layoutGridInner)
 import Maybe.Extra as MaybeExtra
 import Page.Library.CqlPanel as CqlPanel
 import Page.Library.Sidebar as Sidebar
 import Route
-import Session exposing (Session)
+import Session exposing (Server, Session)
 
 
 
@@ -61,8 +62,10 @@ type Msg
     | ClickedHeaderDelete
     | ClickedCqlPanelSave (Maybe Attachment)
     | ClickedSidebarSave Library
+    | ClickedSidebarCopyToServer Server
     | CompletedLoadLibrary (Result FhirHttp.Error Library)
     | CompletedSaveLibrary (Result FhirHttp.Error Library)
+    | CompletedDuplicateLibrary (Result FhirHttp.Error Library)
     | CompletedDeleteLibrary (Result Http.Error ())
     | GotHeaderMsg Header.Msg
     | GotSidebarMsg Sidebar.Msg
@@ -107,6 +110,16 @@ update msg model =
             , saveLibrary (Session.getBase model.session) model.libraryId library
             )
 
+        ClickedSidebarCopyToServer server ->
+            ( model
+            , case model.data of
+                Loaded { library } ->
+                    duplicateLibrary server.url library
+
+                _ ->
+                    Cmd.none
+            )
+
         CompletedLoadLibrary (Ok library) ->
             ( { model | data = loaded library }, Cmd.none )
 
@@ -119,6 +132,12 @@ update msg model =
             ( { model | data = loaded library }, Cmd.none )
 
         CompletedSaveLibrary (Err _) ->
+            ( model, Cmd.none )
+
+        CompletedDuplicateLibrary (Ok library) ->
+            ( { model | data = loaded library }, Cmd.none )
+
+        CompletedDuplicateLibrary (Err _) ->
             ( model, Cmd.none )
 
         CompletedDeleteLibrary (Ok _) ->
@@ -210,6 +229,14 @@ saveLibrary base libraryId library =
         (Library.encode library)
 
 
+duplicateLibrary base library =
+    FhirHttp.create CompletedDuplicateLibrary
+        base
+        "Library"
+        Library.decoder
+        (Library.encode library)
+
+
 deleteLibrary base libraryId =
     FhirHttp.delete CompletedDeleteLibrary base "Library" libraryId
 
@@ -227,7 +254,11 @@ view model =
                 div [ class "main-content library-page" ]
                     [ viewLibrary data
                     , Sidebar.view
-                        { onMsg = GotSidebarMsg, onSave = ClickedSidebarSave }
+                        { servers = Zipper.toList model.session.servers
+                        , onMsg = GotSidebarMsg
+                        , onSave = ClickedSidebarSave
+                        , onCopyToServer = ClickedSidebarCopyToServer
+                        }
                         data.sidebar
                     ]
             }

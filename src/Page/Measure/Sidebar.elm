@@ -1,7 +1,7 @@
 module Page.Measure.Sidebar exposing (Model, Msg, init, update, view)
 
 import Component.Sidebar exposing (sidebar, sidebarConfig)
-import Component.Sidebar.Url as Url
+import Component.Sidebar.UrlPanel as UrlPanel
 import Fhir.Measure as Measure exposing (Measure)
 import Html exposing (Html)
 import Page.Measure.Sidebar.Library as Library
@@ -14,7 +14,7 @@ import Page.Measure.Sidebar.Subject as Subject
 
 type alias Model =
     { measure : Measure
-    , url : Url.Model
+    , urlPanel : UrlPanel.Model
     , subject : Subject.Model
     , library : Library.Model
     }
@@ -27,7 +27,7 @@ init base measure =
             Library.init base (List.head measure.library)
     in
     ( { measure = measure
-      , url = Url.init measure.url
+      , urlPanel = UrlPanel.init measure.url
       , subject = Subject.init (Measure.getSubjectCode measure)
       , library = library
       }
@@ -40,7 +40,7 @@ init base measure =
 
 
 type Msg
-    = GotUrlMsg Url.Msg
+    = GotUrlMsg UrlPanel.Msg
     | GotSubjectMsg Subject.Msg
     | GotLibraryMsg Library.Msg
 
@@ -51,9 +51,9 @@ update msg model =
         GotUrlMsg msg_ ->
             let
                 ( url, cmd ) =
-                    Url.update msg_ model.url
+                    UrlPanel.update msg_ model.urlPanel
             in
-            ( { model | url = url }, Cmd.map GotUrlMsg cmd )
+            ( { model | urlPanel = url }, Cmd.map GotUrlMsg cmd )
 
         GotSubjectMsg msg_ ->
             let
@@ -82,18 +82,18 @@ type alias Config msg =
 view : Config msg -> Model -> Html msg
 view config model =
     sidebar sidebarConfig
-        [ viewUrl config model
+        [ viewUrlPanel config model
         , viewSubject config model
         , viewLibrary config model
         ]
 
 
-viewUrl { onMsg, onSave } ({ measure } as model) =
-    Url.view
+viewUrlPanel { onMsg, onSave } { measure, urlPanel } =
+    UrlPanel.view
         { onMsg = GotUrlMsg >> onMsg
         , onSave = \url -> onSave { measure | url = url }
         }
-        model.url
+        urlPanel
 
 
 viewSubject { onMsg, onSave } ({ measure } as model) =

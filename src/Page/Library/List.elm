@@ -11,7 +11,16 @@ import Json.Decode exposing (decodeValue)
 import Loading exposing (Status(..))
 import Material.Button exposing (buttonConfig, textButton)
 import Material.Fab exposing (fab, fabConfig)
-import Material.List exposing (list, listConfig, listItem, listItemConfig)
+import Material.List
+    exposing
+        ( list
+        , listConfig
+        , listItem
+        , listItemConfig
+        , listItemPrimaryText
+        , listItemSecondaryText
+        , listItemText
+        )
 import Route
 import Session exposing (Session)
 import Url.Builder as UrlBuilder
@@ -119,6 +128,8 @@ createLibrary base =
             , title = Nothing
             , status = Library.Draft
             , type_ = CodeableConcept.ofOneCoding (Library.type_ "logic-library")
+            , subjectCodeableConcept = Nothing
+            , subjectReference = Nothing
             , description = Nothing
             , content = []
             }
@@ -172,20 +183,32 @@ emptyListPlaceholder =
 libraryList libraries =
     div [ class "library-list-page__list" ]
         [ createButton
-        , list listConfig <|
+        , list { listConfig | twoLine = True } <|
             List.map libraryListItem libraries
         ]
 
 
 libraryListItem library =
     listItem { listItemConfig | onClick = Just <| ClickedLibrary library }
-        [ text <| libraryTitle library ]
+        [ listItemText []
+            [ listItemPrimaryText []
+                [ text <| libraryTitle library ]
+            , listItemSecondaryText []
+                [ text <| libraryDetails library ]
+            ]
+        ]
 
 
 libraryTitle { title, name, id } =
     List.filterMap identity [ title, name, id ]
         |> List.head
         |> Maybe.withDefault "<unknown>"
+
+
+libraryDetails { subjectCodeableConcept } =
+    subjectCodeableConcept
+        |> Maybe.andThen (CodeableConcept.getCodeOf "http://hl7.org/fhir/resource-types")
+        |> Maybe.withDefault "Patient"
 
 
 createButton =
