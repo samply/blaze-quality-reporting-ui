@@ -26,6 +26,7 @@ import Json.Encode as Encode exposing (Value)
 type alias Measure =
     { id : Maybe Id
     , url : Maybe Uri
+    , version : Maybe String
     , name : Maybe String
     , title : Maybe String
     , subtitle : Maybe String
@@ -121,6 +122,7 @@ encode measure =
         [ pair "resourceType" Encode.string "Measure"
         , optionalPair "id" Encode.string measure.id
         , optionalPair "url" Encode.string measure.url
+        , optionalPair "version" Encode.string measure.version
         , optionalPair "name" Encode.string measure.name
         , optionalPair "title" Encode.string measure.title
         , optionalPair "subtitle" Encode.string measure.subtitle
@@ -166,6 +168,7 @@ decoder =
     succeed Measure
         |> optional "id" (maybe string) Nothing
         |> optional "url" (maybe string) Nothing
+        |> optional "version" (maybe string) Nothing
         |> optional "name" (maybe string) Nothing
         |> optional "title" (maybe string) Nothing
         |> optional "subtitle" (maybe string) Nothing

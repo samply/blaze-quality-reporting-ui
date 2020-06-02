@@ -89,7 +89,6 @@ body {
 }
 
 .sidebar-entry__content {
-  display: flex;
   color: #4a5566;
 }
 
@@ -103,6 +102,15 @@ body {
   margin-left: 0.5rem
 }
 
+
+/*
+ * Url Panel
+ */
+
+.sidebar-entry.url-panel .sidebar-entry__content {
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
 
 /*
  * Library Page

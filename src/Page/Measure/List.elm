@@ -116,6 +116,7 @@ createMeasure base =
         measure =
             { id = Nothing
             , url = Nothing
+            , version = Nothing
             , name = Nothing
             , title = Nothing
             , subtitle = Nothing

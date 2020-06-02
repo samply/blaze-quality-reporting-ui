@@ -24,6 +24,7 @@ import Component.Sidebar
 import Events
 import Fhir.PrimitiveTypes exposing (Uri)
 import Html exposing (text)
+import Html.Attributes exposing (class)
 import Material.Button exposing (buttonConfig, outlinedButton, unelevatedButton)
 import Material.TextField exposing (textField, textFieldConfig)
 
@@ -84,7 +85,8 @@ type alias Config msg =
 
 view : Config msg -> Model -> SidebarEntry msg
 view { onMsg, onSave } { enteredUrl, edit } =
-    sidebarEntry sidebarEntryConfig
+    sidebarEntry
+        { sidebarEntryConfig | additionalAttributes = [ class "url-panel" ] }
         [ sidebarEntryTitle []
             [ text "URL"
             , sidebarEditButton

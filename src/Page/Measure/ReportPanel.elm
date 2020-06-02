@@ -2,9 +2,10 @@ module Page.Measure.ReportPanel exposing (Model, Msg, init, update, view)
 
 import Fhir.Bundle exposing (Bundle)
 import Fhir.Http as FhirHttp exposing (Error(..))
+import Fhir.Measure exposing (Measure)
 import Fhir.MeasureReport as MeasureReport exposing (MeasureReport, Status(..))
 import Fhir.OperationOutcome as OperationOutcome
-import Fhir.PrimitiveTypes exposing (Canonical, Id, Uri)
+import Fhir.PrimitiveTypes exposing (Id)
 import Html exposing (Html, div, h3, h4, h5, li, p, text, ul)
 import Html.Attributes exposing (class)
 import Json.Decode exposing (decodeValue)
@@ -31,27 +32,22 @@ import Url.Builder as UrlBuilder
 
 type alias Model =
     { base : String
-    , measureUrl : Maybe Uri
-    , libraryRef : Maybe Canonical
+    , measure : Measure
     , reports : Loading.Status (List MeasureReport)
     , error : Maybe FhirHttp.Error
     }
 
 
-init : String -> Maybe Uri -> Maybe Canonical -> ( Model, Cmd Msg )
-init base measureUrl libraryRef =
+init : String -> Measure -> ( Model, Cmd Msg )
+init base measure =
     ( { base = base
-      , measureUrl = measureUrl
-      , libraryRef = libraryRef
+      , measure = measure
       , reports = Loading.Loading
       , error = Nothing
       }
-    , case ( measureUrl, libraryRef ) of
-        ( Just url, Just _ ) ->
-            loadReports base url
-
-        _ ->
-            Cmd.none
+    , measure.url
+        |> Maybe.map (\url -> loadReports base url measure.version)
+        |> Maybe.withDefault Cmd.none
     )
 
 
@@ -71,7 +67,7 @@ update msg model =
     case msg of
         ClickedGenerate ->
             ( model
-            , case model.measureUrl of
+            , case model.measure.url of
                 Just url ->
                     FhirHttp.postOperationType CompletedGenerateReport
                         model.base
@@ -126,11 +122,17 @@ addReport report model =
             model
 
 
-loadReports base measureUrl =
+loadReports base url version =
+    let
+        search =
+            version
+                |> Maybe.map ((++) (url ++ "|"))
+                |> Maybe.withDefault url
+    in
     FhirHttp.searchType CompletedLoadReports
         base
         "MeasureReport"
-        [ UrlBuilder.string "measure" measureUrl ]
+        [ UrlBuilder.string "measure" search ]
 
 
 decodeReports : Bundle -> List MeasureReport
@@ -160,7 +162,7 @@ view config model =
             , class "mdc-typography--headline5"
             ]
             [ text "Reports" ]
-        , case ( model.measureUrl, model.libraryRef ) of
+        , case ( model.measure.url, List.head model.measure.library ) of
             ( Just _, Just _ ) ->
                 case model.reports of
                     Loading.Loaded reports ->

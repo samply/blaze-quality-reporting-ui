@@ -484,17 +484,13 @@ loaded measure model =
                             || data.measure.library
                             /= measure.library
                     then
-                        ReportPanel.init base
-                            measure.url
-                            (List.head measure.library)
+                        ReportPanel.init base measure
 
                     else
                         ( data.reportPanel, Cmd.none )
 
                 _ ->
-                    ReportPanel.init base
-                        measure.url
-                        (List.head measure.library)
+                    ReportPanel.init base measure
     in
     ( { model
         | data =
