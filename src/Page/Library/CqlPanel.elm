@@ -1,12 +1,12 @@
 module Page.Library.CqlPanel exposing (Model, Msg, init, update, view)
 
 import Fhir.Attachment exposing (Attachment)
-import Html exposing (..)
+import Html exposing (Html, div, h2, pre, text)
 import Html.Attributes exposing (class, classList)
-import Material.Button exposing (buttonConfig, outlinedButton, unelevatedButton)
-import Material.IconButton exposing (iconButton, iconButtonConfig)
-import Material.LayoutGrid exposing (layoutGridCell, span12)
-import Material.TextArea exposing (textArea, textAreaConfig)
+import Material.Button as Button
+import Material.IconButton as IconButton
+import Material.LayoutGrid as LayoutGrid exposing (span12)
+import Material.TextArea as TextArea
 import Maybe.Extra as MaybeExtra
 
 
@@ -76,7 +76,7 @@ type alias Config msg =
 
 view : Config msg -> Model -> Html msg
 view { onMsg, onSave } { attachment, edit } =
-    layoutGridCell
+    LayoutGrid.cell
         [ class "cql-panel"
         , span12
         , classList [ ( "cql-panel--edit", edit ) ]
@@ -88,39 +88,36 @@ view { onMsg, onSave } { attachment, edit } =
             ]
         , pre [ class "cql-panel__data" ]
             [ if edit then
-                textArea
-                    { textAreaConfig
-                        | value =
-                            attachment
-                                |> Maybe.andThen .data
-                                |> Maybe.withDefault ""
-                        , fullwidth = True
-                        , rows = Just 20
-                        , onInput = Just (EnteredData >> onMsg)
-                    }
+                TextArea.filled
+                    (TextArea.config
+                        |> TextArea.setValue (attachment |> Maybe.andThen .data)
+                        |> TextArea.setFullwidth True
+                        |> TextArea.setRows (Just 20)
+                        |> TextArea.setOnInput (EnteredData >> onMsg)
+                    )
 
               else
                 attachment |> Maybe.andThen .data |> Maybe.withDefault "" |> text
             ]
         , div [ class "cql-panel__action-buttons" ]
-            [ unelevatedButton
-                { buttonConfig
-                    | onClick = Just (onSave attachment)
-                }
+            [ Button.unelevated
+                (Button.config
+                    |> Button.setOnClick (onSave attachment)
+                )
                 "Save"
-            , outlinedButton
-                { buttonConfig
-                    | onClick = Just (onMsg ClickedCancel)
-                }
+            , Button.outlined
+                (Button.config
+                    |> Button.setOnClick (onMsg ClickedCancel)
+                )
                 "Cancel"
             ]
         ]
 
 
 editButton onMsg =
-    iconButton
-        { iconButtonConfig
-            | onClick = Just (onMsg ClickedEdit)
-            , additionalAttributes = [ class "cql-panel__edit-button" ]
-        }
+    IconButton.iconButton
+        (IconButton.config
+            |> IconButton.setOnClick (onMsg ClickedEdit)
+            |> IconButton.setAttributes [ class "cql-panel__edit-button" ]
+        )
         "edit"

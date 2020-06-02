@@ -13,10 +13,10 @@ import Events exposing (onEnter)
 import Fhir.Measure.Stratifier as Stratifier
 import Html exposing (Html, div)
 import Html.Attributes exposing (class)
-import Material.Icon exposing (icon, iconConfig)
-import Material.IconButton exposing (iconButton, iconButtonConfig)
-import Material.TextArea exposing (textArea, textAreaConfig)
-import Material.TextField exposing (textField, textFieldConfig)
+import Material.Icon as Icon
+import Material.IconButton as IconButton
+import Material.TextArea as TextArea
+import Material.TextField as TextField
 import Maybe.Extra as MaybeExtra
 
 
@@ -93,11 +93,8 @@ view : Config msg -> Model -> Html msg
 view { onMsg, control, onSave } model =
     div [ class "measure-stratifier-dialog-component" ]
         [ div [ class "measure-stratifier-dialog-component__front" ]
-            [ icon
-                { iconConfig
-                    | additionalAttributes =
-                        [ class "measure-stratifier-dialog-component__icon" ]
-                }
+            [ Icon.icon
+                [ class "measure-stratifier-dialog-component__icon" ]
                 "filter_1"
             , case control of
                 AddComponent msg ->
@@ -115,46 +112,52 @@ view { onMsg, control, onSave } model =
 
 
 addComponentButton onClick =
-    iconButton { iconButtonConfig | onClick = Just onClick } "add_box"
+    IconButton.iconButton
+        (IconButton.config |> IconButton.setOnClick onClick)
+        "add_box"
 
 
 removeComponentButton onClick =
-    iconButton { iconButtonConfig | onClick = Just onClick } "remove_circle"
+    IconButton.iconButton
+        (IconButton.config |> IconButton.setOnClick onClick)
+        "remove_circle"
 
 
 codeField onSave onMsg code =
-    textField
-        { textFieldConfig
-            | label = Just "Name"
-            , value = Maybe.withDefault "" code
-            , onInput = Just (EnteredCode >> onMsg)
-            , required = True
-            , valid =
-                Maybe.map (String.isEmpty >> not) code
+    TextField.filled
+        (TextField.config
+            |> TextField.setLabel (Just "Name")
+            |> TextField.setValue code
+            |> TextField.setOnInput (EnteredCode >> onMsg)
+            |> TextField.setRequired True
+            |> TextField.setValid
+                (Maybe.map (String.isEmpty >> not) code
                     |> Maybe.withDefault False
-            , additionalAttributes = MaybeExtra.toList (Maybe.map onEnter onSave)
-        }
+                )
+            |> TextField.setAttributes (MaybeExtra.toList (Maybe.map onEnter onSave))
+        )
 
 
 descriptionField onSave onMsg description =
-    textArea
-        { textAreaConfig
-            | label = Just "Description"
-            , value = Maybe.withDefault "" description
-            , onInput = Just (EnteredDescription >> onMsg)
-            , additionalAttributes = MaybeExtra.toList (Maybe.map onEnter onSave)
-        }
+    TextArea.filled
+        (TextArea.config
+            |> TextArea.setLabel (Just "Description")
+            |> TextArea.setValue description
+            |> TextArea.setOnInput (EnteredDescription >> onMsg)
+            |> TextArea.setAttributes (MaybeExtra.toList (Maybe.map onEnter onSave))
+        )
 
 
 criteriaField onSave onMsg expression =
-    textField
-        { textFieldConfig
-            | label = Just "CQL Criteria Name"
-            , value = Maybe.withDefault "" expression
-            , onInput = Just (EnteredCriteria >> onMsg)
-            , required = True
-            , valid =
-                Maybe.map (String.isEmpty >> not) expression
+    TextField.filled
+        (TextField.config
+            |> TextField.setLabel (Just "CQL Criteria Name")
+            |> TextField.setValue expression
+            |> TextField.setOnInput (EnteredCriteria >> onMsg)
+            |> TextField.setRequired True
+            |> TextField.setValid
+                (Maybe.map (String.isEmpty >> not) expression
                     |> Maybe.withDefault False
-            , additionalAttributes = MaybeExtra.toList (Maybe.map onEnter onSave)
-        }
+                )
+            |> TextField.setAttributes (MaybeExtra.toList (Maybe.map onEnter onSave))
+        )

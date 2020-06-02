@@ -14,20 +14,11 @@ import Fhir.Library as Library exposing (Library)
 import Html exposing (Html, text)
 import Html.Attributes exposing (class)
 import Json.Decode exposing (decodeValue)
-import Material.Dialog exposing (dialog, dialogConfig)
-import Material.Icon exposing (icon, iconConfig)
-import Material.List
-    exposing
-        ( list
-        , listConfig
-        , listItem
-        , listItemConfig
-        , listItemMeta
-        , listItemPrimaryText
-        , listItemSecondaryText
-        , listItemText
-        )
-import Material.TextField exposing (textField, textFieldConfig)
+import Material.Dialog as Dialog
+import Material.Icon as Icon
+import Material.List as List
+import Material.List.Item as ListItem
+import Material.TextField as TextField
 import Maybe.Extra as MaybeExtra
 import Process
 import Task
@@ -43,7 +34,7 @@ type Model
     | Open
         { base : String
         , libraries : List Library
-        , search : String
+        , search : Maybe String
         }
 
 
@@ -69,7 +60,7 @@ doOpen model =
             ( model, Cmd.none )
 
         Closed { base } ->
-            ( Open { base = base, libraries = [], search = "" }
+            ( Open { base = base, libraries = [], search = Nothing }
             , searchLibraries base ""
             )
 
@@ -91,14 +82,14 @@ update msg model =
             ( doClose model, Cmd.none )
 
         ( EnteredSearch search, Open data ) ->
-            ( Open { data | search = search }
+            ( Open { data | search = Just search }
             , Process.sleep 200
                 |> Task.map (\_ -> search)
                 |> Task.perform MaybePerformSearch
             )
 
         ( MaybePerformSearch search, Open data ) ->
-            if search == data.search then
+            if Just search == data.search then
                 ( model, searchLibraries data.base search )
 
             else
@@ -155,23 +146,23 @@ view { onMsg, onSelect } model =
                     ( True, data.search, data.libraries )
 
                 Closed _ ->
-                    ( False, "", [] )
+                    ( False, Nothing, [] )
     in
-    dialog
-        { dialogConfig
-            | open = open
-            , onClose = Just (onMsg ClickedClose)
-            , additionalAttributes = [ class "measure-assoc-library-dialog" ]
-        }
+    Dialog.dialog
+        (Dialog.config
+            |> Dialog.setOpen open
+            |> Dialog.setOnClose (onMsg ClickedClose)
+            |> Dialog.setAttributes [ class "measure-assoc-library-dialog" ]
+        )
         { title = Just "Load Library"
         , content =
-            [ textField
-                { textFieldConfig
-                    | placeholder = Just "Search"
-                    , value = search
-                    , onInput = Just (EnteredSearch >> onMsg)
-                    , fullwidth = True
-                }
+            [ TextField.filled
+                (TextField.config
+                    |> TextField.setPlaceholder (Just "Search")
+                    |> TextField.setValue search
+                    |> TextField.setOnInput (EnteredSearch >> onMsg)
+                    |> TextField.setFullwidth True
+                )
             , if List.isEmpty libraries then
                 emptyListPlaceholder
 
@@ -187,7 +178,7 @@ emptyListPlaceholder =
 
 
 libraryList onSelect libraries =
-    list { listConfig | twoLine = True } <|
+    List.list (List.config |> List.setTwoLine True) <|
         List.map (libraryListItem onSelect) libraries
 
 
@@ -196,17 +187,15 @@ libraryListItem onSelect library =
         disabled =
             MaybeExtra.isNothing library.url
     in
-    listItem
-        { listItemConfig
-            | onClick = Just <| onSelect library
-            , disabled = disabled
-        }
-        [ listItemText []
-            [ listItemPrimaryText []
-                [ titleText library ]
-            , listItemSecondaryText []
-                [ urlText library ]
-            ]
+    ListItem.listItem
+        (ListItem.config
+            |> ListItem.setOnClick (onSelect library)
+            |> ListItem.setDisabled disabled
+        )
+        [ ListItem.text []
+            { primary = [ titleText library ]
+            , secondary = [ urlText library ]
+            }
         , meta disabled
         ]
 
@@ -226,7 +215,7 @@ urlText { url } =
 
 meta disabled =
     if disabled then
-        listItemMeta [] [ icon iconConfig "warning" ]
+        ListItem.meta [] [ Icon.icon [] "warning" ]
 
     else
         text ""

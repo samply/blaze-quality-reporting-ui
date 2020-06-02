@@ -10,17 +10,9 @@ module Component.Sidebar.SharePanel.CopyToServerDialog exposing
 
 import Html exposing (Html, text)
 import Html.Attributes exposing (class)
-import Material.Dialog exposing (dialog, dialogConfig)
-import Material.List
-    exposing
-        ( list
-        , listConfig
-        , listItem
-        , listItemConfig
-        , listItemPrimaryText
-        , listItemSecondaryText
-        , listItemText
-        )
+import Material.Dialog as Dialog
+import Material.List as List
+import Material.List.Item as ListItem
 import Session exposing (Server)
 
 
@@ -97,12 +89,12 @@ view { servers, onMsg, onSelect } model =
                 Closed ->
                     False
     in
-    dialog
-        { dialogConfig
-            | open = open
-            , onClose = Just (onMsg ClickedClose)
-            , additionalAttributes = [ class "copy-to-server-dialog" ]
-        }
+    Dialog.dialog
+        (Dialog.config
+            |> Dialog.setOpen open
+            |> Dialog.setOnClose (onMsg ClickedClose)
+            |> Dialog.setAttributes [ class "copy-to-server-dialog" ]
+        )
         { title = Just "Copy to Server"
         , content =
             [ if List.isEmpty servers then
@@ -120,19 +112,15 @@ emptyListPlaceholder =
 
 
 serverList onSelect servers =
-    list { listConfig | twoLine = True } <|
+    List.list (List.config |> List.setTwoLine True) <|
         List.map (serverListItem onSelect) servers
 
 
 serverListItem onSelect server =
-    listItem
-        { listItemConfig
-            | onClick = Just <| onSelect server
-        }
-        [ listItemText []
-            [ listItemPrimaryText []
-                [ text server.name ]
-            , listItemSecondaryText []
-                [ text server.url ]
-            ]
+    ListItem.listItem
+        (ListItem.config |> ListItem.setOnClick (onSelect server))
+        [ ListItem.text []
+            { primary = [ text server.name ]
+            , secondary = [ text server.url ]
+            }
         ]

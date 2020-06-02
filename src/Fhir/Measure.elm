@@ -94,14 +94,19 @@ getResourceTypeCode =
     CodeableConcept.getCodeOf "http://hl7.org/fhir/resource-types"
 
 
-setSubjectCode : String -> Measure -> Measure
+setSubjectCode : Maybe String -> Measure -> Measure
 setSubjectCode code measure =
-    case measure.subject of
-        Just subject ->
-            { measure | subject = Just (setResourceTypeCode code subject) }
+    case code of
+        Just c ->
+            case measure.subject of
+                Just subject ->
+                    { measure | subject = Just (setResourceTypeCode c subject) }
+
+                Nothing ->
+                    { measure | subject = Just (subjectCodeableConcept c) }
 
         Nothing ->
-            { measure | subject = Just (subjectCodeableConcept code) }
+            { measure | subject = Nothing }
 
 
 setResourceTypeCode =

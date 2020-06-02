@@ -13,10 +13,11 @@ import Fhir.CodeableConcept as CodeableConcept
 import Fhir.Measure as Measure
 import Html exposing (Html)
 import Html.Attributes exposing (class)
-import Material.Button exposing (buttonConfig, textButton)
-import Material.Dialog exposing (dialog, dialogConfig)
-import Material.TextArea exposing (textArea, textAreaConfig)
-import Material.TextField exposing (textField, textFieldConfig)
+import Material.Button as Button
+import Material.Dialog as Dialog
+import Material.TextArea as TextArea
+import Material.TextField as TextField
+import MaterialUtil
 import Maybe.Extra as MaybeExtra
 
 
@@ -135,12 +136,12 @@ view { onMsg, onSave } model =
         onSave_ =
             MaybeExtra.andMap population onSave
     in
-    dialog
-        { dialogConfig
-            | open = isOpen model
-            , onClose = Just (onMsg ClickedClose)
-            , additionalAttributes = [ class "measure-population-dialog" ]
-        }
+    Dialog.dialog
+        (Dialog.config
+            |> Dialog.setOpen (isOpen model)
+            |> Dialog.setOnClose (onMsg ClickedClose)
+            |> Dialog.setAttributes [ class "measure-population-dialog" ]
+        )
         { title = Just "Population"
         , content =
             [ codeField onSave_ onMsg code
@@ -153,19 +154,20 @@ view { onMsg, onSave } model =
                 |> criteriaField onSave_ onMsg
             ]
         , actions =
-            [ textButton
-                { buttonConfig
-                    | onClick = Just (onMsg ClickedClose)
-                }
+            [ Button.text
+                (Button.config
+                    |> Button.setOnClick (onMsg ClickedClose)
+                )
                 "Cancel"
-            , textButton
-                { buttonConfig
-                    | onClick = onSave_
-                    , disabled =
-                        code
+            , Button.text
+                (Button.config
+                    |> MaterialUtil.liftMaybe Button.setOnClick onSave_
+                    |> Button.setDisabled
+                        (code
                             |> Maybe.map String.isEmpty
                             |> Maybe.withDefault True
-                }
+                        )
+                )
                 "Save"
             ]
         }
@@ -181,47 +183,51 @@ isOpen model =
 
 
 codeField onSave onMsg code =
-    textField
-        { textFieldConfig
-            | label = Just "Type"
-            , value = Maybe.withDefault "" code
-            , onInput = Just (EnteredCode >> onMsg)
-            , required = True
-            , valid =
-                Maybe.map (String.isEmpty >> not) code
+    TextField.filled
+        (TextField.config
+            |> TextField.setLabel (Just "Type")
+            |> TextField.setValue code
+            |> TextField.setOnInput (EnteredCode >> onMsg)
+            |> TextField.setRequired True
+            |> TextField.setValid
+                (Maybe.map (String.isEmpty >> not) code
                     |> Maybe.withDefault False
-            , disabled = True
-            , additionalAttributes =
-                onSave
+                )
+            |> TextField.setDisabled True
+            |> TextField.setAttributes
+                (onSave
                     |> Maybe.map onEnter
                     |> Maybe.map List.singleton
                     |> Maybe.withDefault []
-        }
+                )
+        )
 
 
 descriptionField onSave onMsg description =
-    textArea
-        { textAreaConfig
-            | label = Just "Description"
-            , value = Maybe.withDefault "" description
-            , onInput = Just (EnteredDescription >> onMsg)
-            , additionalAttributes =
-                onSave
+    TextArea.filled
+        (TextArea.config
+            |> TextArea.setLabel (Just "Description")
+            |> TextArea.setValue description
+            |> TextArea.setOnInput (EnteredDescription >> onMsg)
+            |> TextArea.setAttributes
+                (onSave
                     |> Maybe.map onEnter
                     |> Maybe.map List.singleton
                     |> Maybe.withDefault []
-        }
+                )
+        )
 
 
 criteriaField onSave onMsg expression =
-    textField
-        { textFieldConfig
-            | label = Just "Criteria"
-            , value = Maybe.withDefault "" expression
-            , onInput = Just (EnteredCriteria >> onMsg)
-            , additionalAttributes =
-                onSave
+    TextField.filled
+        (TextField.config
+            |> TextField.setLabel (Just "Criteria")
+            |> TextField.setValue expression
+            |> TextField.setOnInput (EnteredCriteria >> onMsg)
+            |> TextField.setAttributes
+                (onSave
                     |> Maybe.map onEnter
                     |> Maybe.map List.singleton
                     |> Maybe.withDefault []
-        }
+                )
+        )

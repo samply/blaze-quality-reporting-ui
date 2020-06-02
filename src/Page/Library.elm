@@ -11,7 +11,7 @@ import Html.Attributes exposing (class)
 import Http
 import List.Zipper as Zipper
 import Loading exposing (Status(..))
-import Material.LayoutGrid exposing (layoutGrid, layoutGridInner)
+import Material.LayoutGrid as LayoutGrid
 import Maybe.Extra as MaybeExtra
 import Page.Library.CqlPanel as CqlPanel
 import Page.Library.Sidebar as Sidebar
@@ -279,8 +279,8 @@ view model =
 
 viewLibrary : Data -> Html Msg
 viewLibrary { library, header, cqlPanel } =
-    layoutGrid [ class "library" ]
-        [ layoutGridInner []
+    LayoutGrid.layoutGrid [ class "library" ]
+        [ LayoutGrid.inner []
             [ viewHeader header
             , viewCqlPanel cqlPanel
             ]

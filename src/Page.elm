@@ -2,29 +2,14 @@ module Page exposing (..)
 
 import Browser exposing (Document)
 import Component.FontAwesome as Fa
-import Html exposing (Html, div, h3, h6, i, span, text)
+import Html exposing (Html, div, h3, h6, span, text)
 import Html.Attributes exposing (class)
-import Material.Drawer
-    exposing
-        ( drawerContent
-        , drawerHeader
-        , drawerSubtitle
-        , drawerTitle
-        , permanentDrawer
-        , permanentDrawerConfig
-        )
-import Material.Icon exposing (icon, iconConfig)
-import Material.List
-    exposing
-        ( list
-        , listConfig
-        , listItem
-        , listItemConfig
-        , listItemDivider
-        , listItemDividerConfig
-        , listItemGraphic
-        )
-import Material.TopAppBar as TopAppBar exposing (topAppBar, topAppBarConfig)
+import Material.Drawer.Permanent as Drawer
+import Material.Icon as Icon
+import Material.List as List
+import Material.List.Divider as ListDivider
+import Material.List.Item as ListItem
+import Material.TopAppBar as TopAppBar
 import Material.Typography as Typography
 import Session exposing (Session)
 
@@ -71,42 +56,42 @@ view toPageMsg config session { title, content } =
 
 
 drawer config =
-    permanentDrawer
-        { permanentDrawerConfig | additionalAttributes = [ class "drawer" ] }
-        [ drawerHeader []
-            [ h3 [ drawerTitle ] [ text "Blaze QR" ]
-            , h6 [ drawerSubtitle ]
+    Drawer.drawer
+        (Drawer.config |> Drawer.setAttributes [ class "drawer" ])
+        [ Drawer.header []
+            [ h3 [ Drawer.title ] [ text "Blaze QR" ]
+            , h6 [ Drawer.subtitle ]
                 [ text "Quality Reporting" ]
             ]
-        , drawerContent [ class "drawer__content" ]
-            [ list listConfig
-                [ listItem
-                    { listItemConfig
-                        | onClick = Just (config.onNavItemClick Libraries)
-                    }
-                    [ listItemGraphic [] [ Fa.icon "book" ]
+        , Drawer.content [ class "drawer__content" ]
+            [ List.list List.config
+                [ ListItem.listItem
+                    (ListItem.config
+                        |> ListItem.setOnClick (config.onNavItemClick Libraries)
+                    )
+                    [ ListItem.graphic [] [ Fa.icon "book" ]
                     , text "Libraries"
                     ]
-                , listItem
-                    { listItemConfig
-                        | onClick = Just (config.onNavItemClick Measures)
-                    }
-                    [ listItemGraphic [] [ Fa.icon "calculator" ]
+                , ListItem.listItem
+                    (ListItem.config
+                        |> ListItem.setOnClick (config.onNavItemClick Measures)
+                    )
+                    [ ListItem.graphic [] [ Fa.icon "calculator" ]
                     , text "Measures"
                     ]
-                , listItemDivider listItemDividerConfig
-                , listItem
-                    { listItemConfig
-                        | onClick = Just (config.onNavItemClick Settings)
-                    }
-                    [ listItemGraphic [] [ icon iconConfig "settings" ]
+                , ListDivider.listItem ListDivider.config
+                , ListItem.listItem
+                    (ListItem.config
+                        |> ListItem.setOnClick (config.onNavItemClick Settings)
+                    )
+                    [ ListItem.graphic [] [ Icon.icon [] "settings" ]
                     , text "Settings"
                     ]
-                , listItem
-                    { listItemConfig
-                        | onClick = Just (config.onNavItemClick Help)
-                    }
-                    [ listItemGraphic [] [ icon iconConfig "help" ]
+                , ListItem.listItem
+                    (ListItem.config
+                        |> ListItem.setOnClick (config.onNavItemClick Help)
+                    )
+                    [ ListItem.graphic [] [ Icon.icon [] "help" ]
                     , text "Help"
                     ]
                 ]
@@ -116,11 +101,11 @@ drawer config =
 
 appBar : Session -> List String -> Html msg
 appBar session title =
-    topAppBar
-        { topAppBarConfig
-            | fixed = True
-            , additionalAttributes = [ class "app-bar" ]
-        }
+    TopAppBar.regular
+        (TopAppBar.config
+            |> TopAppBar.setFixed True
+            |> TopAppBar.setAttributes [ class "app-bar" ]
+        )
         [ TopAppBar.row []
             [ TopAppBar.section [ TopAppBar.alignStart ]
                 [ span [ TopAppBar.title ]

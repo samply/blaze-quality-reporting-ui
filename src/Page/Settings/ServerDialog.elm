@@ -11,9 +11,10 @@ module Page.Settings.ServerDialog exposing
 import Events exposing (onEnter)
 import Html exposing (Html)
 import Html.Attributes exposing (class)
-import Material.Button exposing (buttonConfig, textButton)
-import Material.Dialog exposing (dialog, dialogConfig)
-import Material.TextField exposing (textField, textFieldConfig)
+import Material.Button as Button
+import Material.Dialog as Dialog
+import Material.TextField as TextField
+import MaterialUtil
 import Maybe.Extra as MaybeExtra
 import Session exposing (Server)
 
@@ -100,28 +101,28 @@ view { onMsg, onSave } model =
         onSave_ =
             MaybeExtra.andMap server onSave
     in
-    dialog
-        { dialogConfig
-            | open = isOpen model
-            , onClose = Just (onMsg ClickedClose)
-            , additionalAttributes = [ class "settings-server-dialog" ]
-        }
+    Dialog.dialog
+        (Dialog.config
+            |> Dialog.setOpen (isOpen model)
+            |> Dialog.setOnClose (onMsg ClickedClose)
+            |> Dialog.setAttributes [ class "settings-server-dialog" ]
+        )
         { title = Just "Server"
         , content =
             [ nameField onSave_ onMsg name
             , urlField onSave_ onMsg url
             ]
         , actions =
-            [ textButton
-                { buttonConfig
-                    | onClick = Just (onMsg ClickedClose)
-                }
+            [ Button.text
+                (Button.config
+                    |> Button.setOnClick (onMsg ClickedClose)
+                )
                 "Cancel"
-            , textButton
-                { buttonConfig
-                    | onClick = onSave_
-                    , disabled = isEmpty name || isEmpty url
-                }
+            , Button.text
+                (Button.config
+                    |> MaterialUtil.liftMaybe Button.setOnClick onSave_
+                    |> Button.setDisabled (isEmpty name || isEmpty url)
+                )
                 "Save"
             ]
         }
@@ -144,36 +145,40 @@ isEmpty s =
 
 
 nameField onSave onMsg name =
-    textField
-        { textFieldConfig
-            | label = Just "Name"
-            , value = Maybe.withDefault "" name
-            , onInput = Just (EnteredName >> onMsg)
-            , required = True
-            , valid =
-                Maybe.map (String.isEmpty >> not) name
+    TextField.filled
+        (TextField.config
+            |> TextField.setLabel (Just "Name")
+            |> TextField.setValue name
+            |> TextField.setOnInput (EnteredName >> onMsg)
+            |> TextField.setRequired True
+            |> TextField.setValid
+                (Maybe.map (String.isEmpty >> not) name
                     |> Maybe.withDefault False
-            , additionalAttributes =
-                onSave
+                )
+            |> TextField.setAttributes
+                (onSave
                     |> Maybe.map onEnter
                     |> Maybe.map List.singleton
                     |> Maybe.withDefault []
-        }
+                )
+        )
 
 
 urlField onSave onMsg url =
-    textField
-        { textFieldConfig
-            | label = Just "URL"
-            , value = Maybe.withDefault "" url
-            , onInput = Just (EnteredUrl >> onMsg)
-            , required = True
-            , valid =
-                Maybe.map (String.isEmpty >> not) url
+    TextField.filled
+        (TextField.config
+            |> TextField.setLabel (Just "URL")
+            |> TextField.setValue url
+            |> TextField.setOnInput (EnteredUrl >> onMsg)
+            |> TextField.setRequired True
+            |> TextField.setValid
+                (Maybe.map (String.isEmpty >> not) url
                     |> Maybe.withDefault False
-            , additionalAttributes =
-                onSave
+                )
+            |> TextField.setAttributes
+                (onSave
                     |> Maybe.map onEnter
                     |> Maybe.map List.singleton
                     |> Maybe.withDefault []
-        }
+                )
+        )

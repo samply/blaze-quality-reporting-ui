@@ -3,11 +3,11 @@ module Component.Header exposing (Model, Msg, init, update, view)
 import Events
 import Html exposing (..)
 import Html.Attributes exposing (class, classList)
-import Material.Button exposing (buttonConfig, outlinedButton, unelevatedButton)
-import Material.IconButton exposing (iconButton, iconButtonConfig)
-import Material.LayoutGrid exposing (layoutGridCell, span12)
-import Material.TextArea exposing (textArea, textAreaConfig)
-import Material.TextField exposing (textField, textFieldConfig)
+import Material.Button as Button
+import Material.IconButton as IconButton
+import Material.LayoutGrid as LayoutGrid exposing (span12)
+import Material.TextArea as TextArea
+import Material.TextField as TextField
 
 
 
@@ -85,7 +85,7 @@ type alias Config msg =
 
 view : Config msg -> Model -> Html msg
 view { onSave, onDelete, onMsg } { title, enteredTitle, description, enteredDescription, edit } =
-    layoutGridCell
+    LayoutGrid.cell
         [ class "measure-header"
         , span12
         , classList [ ( "measure-header--edit", edit ) ]
@@ -93,56 +93,42 @@ view { onSave, onDelete, onMsg } { title, enteredTitle, description, enteredDesc
     <|
         [ div [ class "measure-header__title" ]
             (if edit then
-                [ textField
-                    { textFieldConfig
-                        | value = Maybe.withDefault "" enteredTitle
-                        , outlined = True
-                        , onInput = Just (EnteredTitle >> onMsg)
-                        , additionalAttributes =
+                [ TextField.outlined
+                    (TextField.config
+                        |> TextField.setValue enteredTitle
+                        |> TextField.setOnInput (EnteredTitle >> onMsg)
+                        |> TextField.setAttributes
                             [ Events.onEnterEsc
                                 (onSave enteredTitle enteredDescription)
                                 (onMsg ClickedCancel)
                             ]
-                    }
+                    )
                 ]
 
              else
                 [ h2 [ class "mdc-typography--headline5" ]
                     [ text (Maybe.withDefault "<not specified>" title) ]
-                , iconButton
-                    { iconButtonConfig | onClick = Just (onMsg ClickedEdit) }
+                , IconButton.iconButton
+                    (IconButton.config
+                        |> IconButton.setOnClick (onMsg ClickedEdit)
+                    )
                     "edit"
                 ]
             )
         ]
             ++ (if edit then
                     [ div [ class "measure-header__description" ]
-                        [ textArea
-                            { textAreaConfig
-                                | value = Maybe.withDefault "" enteredDescription
-                                , fullwidth = True
-                                , onInput = Just (EnteredDescription >> onMsg)
-                            }
+                        [ TextArea.outlined
+                            (TextArea.config
+                                |> TextArea.setFullwidth True
+                                |> TextArea.setOnInput (EnteredDescription >> onMsg)
+                            )
                         ]
                     , div [ class "measure-header__action-buttons" ]
-                        [ unelevatedButton
-                            { buttonConfig
-                                | onClick = Just (onSave enteredTitle enteredDescription)
-                            }
-                            "Save"
+                        [ saveButton (onSave enteredTitle enteredDescription)
                         , div [ class "measure-header__action-buttons-right" ]
-                            [ unelevatedButton
-                                { buttonConfig
-                                    | onClick = Just onDelete
-                                    , additionalAttributes =
-                                        [ class "measure-header__delete-button" ]
-                                }
-                                "Delete"
-                            , outlinedButton
-                                { buttonConfig
-                                    | onClick = Just (onMsg ClickedCancel)
-                                }
-                                "Cancel"
+                            [ deleteButton onDelete
+                            , cancelButton (onMsg ClickedCancel)
                             ]
                         ]
                     ]
@@ -157,3 +143,29 @@ view { onSave, onDelete, onMsg } { title, enteredTitle, description, enteredDesc
                         Nothing ->
                             []
                )
+
+
+saveButton onClick =
+    Button.unelevated
+        (Button.config
+            |> Button.setOnClick onClick
+        )
+        "Save"
+
+
+deleteButton onClick =
+    Button.unelevated
+        (Button.config
+            |> Button.setOnClick onClick
+            |> Button.setAttributes
+                [ class "measure-header__delete-button" ]
+        )
+        "Delete"
+
+
+cancelButton onClick =
+    Button.outlined
+        (Button.config
+            |> Button.setOnClick onClick
+        )
+        "Cancel"

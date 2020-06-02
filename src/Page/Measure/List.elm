@@ -10,9 +10,10 @@ import Html exposing (Html, div, text)
 import Html.Attributes exposing (class)
 import Json.Decode exposing (decodeValue)
 import Loading exposing (Status(..))
-import Material.Button exposing (buttonConfig, textButton)
-import Material.Fab exposing (fab, fabConfig)
-import Material.List exposing (list, listConfig, listItem, listItemConfig)
+import Material.Button as Button
+import Material.Fab as Fab
+import Material.List as List
+import Material.List.Item as ListItem
 import Route
 import Session exposing (Session)
 import Url.Builder as UrlBuilder
@@ -195,8 +196,8 @@ view model =
 
 emptyListPlaceholder =
     div [ class "measure-list-page__empty-placeholder" ]
-        [ textButton
-            { buttonConfig | onClick = Just ClickedCreateMeasure }
+        [ Button.text
+            (Button.config |> Button.setOnClick ClickedCreateMeasure)
             "create the first measure"
         ]
 
@@ -204,13 +205,16 @@ emptyListPlaceholder =
 measureList measures =
     div [ class "measure-list-page__list" ]
         [ createButton
-        , list listConfig <|
+        , List.list List.config <|
             List.map measureListItem measures
         ]
 
 
 measureListItem measure =
-    listItem { listItemConfig | onClick = Just <| ClickedMeasure measure }
+    ListItem.listItem
+        (ListItem.config
+            |> ListItem.setOnClick (ClickedMeasure measure)
+        )
         [ text <| measureTitle measure ]
 
 
@@ -221,9 +225,9 @@ measureTitle { title, name, id } =
 
 
 createButton =
-    fab
-        { fabConfig
-            | onClick = Just ClickedCreateMeasure
-            , additionalAttributes = [ class "measure-list-page__create-button" ]
-        }
+    Fab.fab
+        (Fab.config
+            |> Fab.setOnClick ClickedCreateMeasure
+            |> Fab.setAttributes [ class "measure-list-page__create-button" ]
+        )
         "add"

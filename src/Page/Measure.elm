@@ -12,22 +12,9 @@ import Http
 import List.Extra exposing (getAt, removeAt, setAt, updateAt)
 import List.Zipper as Zipper
 import Loading exposing (Status(..))
-import Material.Button exposing (buttonConfig, outlinedButton)
-import Material.Card
-    exposing
-        ( card
-        , cardActionButton
-        , cardActions
-        , cardBlock
-        , cardConfig
-        )
-import Material.LayoutGrid
-    exposing
-        ( layoutGrid
-        , layoutGridCell
-        , layoutGridInner
-        , span12
-        )
+import Material.Button as Button
+import Material.Card as Card
+import Material.LayoutGrid as LayoutGrid exposing (span12)
 import Maybe.Extra as MaybeExtra
 import Page.Measure.AssocLibraryDialog as AssocLibraryDialog
 import Page.Measure.PopulationDialog as PopulationDialog
@@ -625,8 +612,8 @@ viewSidebar session sidebar =
 
 viewMeasure : Data -> Html Msg
 viewMeasure { measure, header, reportPanel } =
-    layoutGrid [ class "measure" ]
-        [ layoutGridInner []
+    LayoutGrid.layoutGrid [ class "measure" ]
+        [ LayoutGrid.inner []
             ([ viewHeader header ]
                 ++ List.indexedMap viewGroup measure.group
                 ++ [ viewReportPanel reportPanel ]
@@ -645,20 +632,20 @@ viewHeader header =
 
 viewGroup : Int -> Measure.Group -> Html Msg
 viewGroup groupIdx { population, stratifier } =
-    layoutGridCell [ span12, class "measure-group" ]
+    LayoutGrid.cell [ span12, class "measure-group" ]
         [ viewPopulationPanel groupIdx population
         , viewStratifierPanel groupIdx stratifier
         ]
 
 
 viewPopulationPanel groupIdx populations =
-    layoutGridInner [ class "measure-population-panel" ] <|
-        [ layoutGridCell [ span12 ]
+    LayoutGrid.inner [ class "measure-population-panel" ] <|
+        [ LayoutGrid.cell [ span12 ]
             [ h3 [ class "mdc-typography--headline5" ] [ text "Populations" ] ]
         ]
             ++ List.indexedMap
                 (\idx population ->
-                    layoutGridCell []
+                    LayoutGrid.cell []
                         [ viewPopulation groupIdx idx population ]
                 )
                 populations
@@ -666,13 +653,13 @@ viewPopulationPanel groupIdx populations =
 
 viewPopulation : Int -> Int -> Measure.Population -> Html Msg
 viewPopulation groupIdx populationIdx { code, description } =
-    card
-        { cardConfig
-            | outlined = True
-            , additionalAttributes = [ class "measure-population" ]
-        }
+    Card.card
+        (Card.config
+            |> Card.setOutlined True
+            |> Card.setAttributes [ class "measure-population" ]
+        )
         { blocks =
-            [ cardBlock <|
+            [ Card.block <|
                 div [ class "measure-population__header" ]
                     [ h4
                         [ class "measure-population__title"
@@ -686,22 +673,22 @@ viewPopulation groupIdx populationIdx { code, description } =
                             |> text
                         ]
                     ]
-            , cardBlock <|
+            , Card.block <|
                 div [ class "measure-population__description" ]
                     [ text (Maybe.withDefault "" description) ]
             ]
         , actions =
             Just <|
-                cardActions
+                Card.actions
                     { buttons =
-                        [ cardActionButton
-                            { buttonConfig
-                                | onClick =
-                                    ClickedPopulationEdit
+                        [ Card.button
+                            (Button.config
+                                |> Button.setOnClick
+                                    (ClickedPopulationEdit
                                         groupIdx
                                         populationIdx
-                                        |> Just
-                            }
+                                    )
+                            )
                             "edit"
                         ]
                     , icons = []
@@ -710,21 +697,21 @@ viewPopulation groupIdx populationIdx { code, description } =
 
 
 viewStratifierPanel groupIdx stratifiers =
-    layoutGridInner [ class "measure-stratifier-panel" ] <|
-        [ layoutGridCell [ span12 ]
+    LayoutGrid.inner [ class "measure-stratifier-panel" ] <|
+        [ LayoutGrid.cell [ span12 ]
             [ h3 [ class "mdc-typography--headline5" ] [ text "Stratifiers" ] ]
         ]
             ++ List.indexedMap
                 (\idx stratifier ->
-                    layoutGridCell []
+                    LayoutGrid.cell []
                         [ viewStratifier groupIdx idx stratifier ]
                 )
                 stratifiers
-            ++ [ layoutGridCell [ span12 ]
-                    [ outlinedButton
-                        { buttonConfig
-                            | onClick = Just (ClickedAddStratifier groupIdx)
-                        }
+            ++ [ LayoutGrid.cell [ span12 ]
+                    [ Button.outlined
+                        (Button.config
+                            |> Button.setOnClick (ClickedAddStratifier groupIdx)
+                        )
                         "add stratifier"
                     ]
                ]
@@ -745,13 +732,13 @@ viewStratifier groupIdx stratifierIdx { code, description, component } =
                     |> List.filterMap (.code >> Maybe.andThen .text)
                     |> String.join ", "
     in
-    card
-        { cardConfig
-            | outlined = True
-            , additionalAttributes = [ class "measure-stratifier" ]
-        }
+    Card.card
+        (Card.config
+            |> Card.setOutlined True
+            |> Card.setAttributes [ class "measure-stratifier" ]
+        )
         { blocks =
-            [ cardBlock <|
+            [ Card.block <|
                 div [ class "measure-stratifier__header" ]
                     [ h4
                         [ class "measure-stratifier__title"
@@ -759,31 +746,31 @@ viewStratifier groupIdx stratifierIdx { code, description, component } =
                         ]
                         [ text title ]
                     ]
-            , cardBlock <|
+            , Card.block <|
                 div [ class "measure-stratifier__description" ]
                     [ text (Maybe.withDefault "" description) ]
             ]
         , actions =
             Just <|
-                cardActions
+                Card.actions
                     { buttons =
-                        [ cardActionButton
-                            { buttonConfig
-                                | onClick =
-                                    ClickedStratifierEdit
+                        [ Card.button
+                            (Button.config
+                                |> Button.setOnClick
+                                    (ClickedStratifierEdit
                                         groupIdx
                                         stratifierIdx
-                                        |> Just
-                            }
+                                    )
+                            )
                             "edit"
-                        , cardActionButton
-                            { buttonConfig
-                                | onClick =
-                                    ClickedStratifierDelete
+                        , Card.button
+                            (Button.config
+                                |> Button.setOnClick
+                                    (ClickedStratifierDelete
                                         groupIdx
                                         stratifierIdx
-                                        |> Just
-                            }
+                                    )
+                            )
                             "delete"
                         ]
                     , icons = []
@@ -792,14 +779,12 @@ viewStratifier groupIdx stratifierIdx { code, description, component } =
 
 
 viewReportPanel reportPanel =
-    let
-        config =
-            { onLibraryAssoc = ClickedLibraryAssoc
-            , onReportClick = ClickedReport
-            , onMsg = GotReportPanelMsg
-            }
-    in
-    ReportPanel.view config reportPanel
+    ReportPanel.view
+        { onMsg = GotReportPanelMsg
+        , onLibraryAssoc = ClickedLibraryAssoc
+        , onReportClick = ClickedReport
+        }
+        reportPanel
 
 
 viewError : FhirHttp.Error -> Html Msg

@@ -9,18 +9,10 @@ import Html exposing (Html, div, text)
 import Html.Attributes exposing (class)
 import Json.Decode exposing (decodeValue)
 import Loading exposing (Status(..))
-import Material.Button exposing (buttonConfig, textButton)
-import Material.Fab exposing (fab, fabConfig)
-import Material.List
-    exposing
-        ( list
-        , listConfig
-        , listItem
-        , listItemConfig
-        , listItemPrimaryText
-        , listItemSecondaryText
-        , listItemText
-        )
+import Material.Button as Button
+import Material.Fab as Fab
+import Material.List as List
+import Material.List.Item as ListItem
 import Route
 import Session exposing (Session)
 import Url.Builder as UrlBuilder
@@ -174,8 +166,8 @@ view model =
 
 emptyListPlaceholder =
     div [ class "library-list-page__empty-placeholder" ]
-        [ textButton
-            { buttonConfig | onClick = Just ClickedCreateLibrary }
+        [ Button.text
+            (Button.config |> Button.setOnClick ClickedCreateLibrary)
             "create the first library"
         ]
 
@@ -183,19 +175,18 @@ emptyListPlaceholder =
 libraryList libraries =
     div [ class "library-list-page__list" ]
         [ createButton
-        , list { listConfig | twoLine = True } <|
+        , List.list (List.config |> List.setTwoLine True) <|
             List.map libraryListItem libraries
         ]
 
 
 libraryListItem library =
-    listItem { listItemConfig | onClick = Just <| ClickedLibrary library }
-        [ listItemText []
-            [ listItemPrimaryText []
-                [ text <| libraryTitle library ]
-            , listItemSecondaryText []
-                [ text <| libraryDetails library ]
-            ]
+    ListItem.listItem
+        (ListItem.config |> ListItem.setOnClick (ClickedLibrary library))
+        [ ListItem.text []
+            { primary = [ text <| libraryTitle library ]
+            , secondary = [ text <| libraryDetails library ]
+            }
         ]
 
 
@@ -212,9 +203,9 @@ libraryDetails { subjectCodeableConcept } =
 
 
 createButton =
-    fab
-        { fabConfig
-            | onClick = Just ClickedCreateLibrary
-            , additionalAttributes = [ class "library-list-page__create-button" ]
-        }
+    Fab.fab
+        (Fab.config
+            |> Fab.setOnClick ClickedCreateLibrary
+            |> Fab.setAttributes [ class "library-list-page__create-button" ]
+        )
         "add"

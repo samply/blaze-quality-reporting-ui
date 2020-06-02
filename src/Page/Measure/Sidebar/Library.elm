@@ -1,21 +1,13 @@
 module Page.Measure.Sidebar.Library exposing (Model, Msg, init, update, view)
 
-import Component.Sidebar
-    exposing
-        ( SidebarEntry
-        , sidebarEditButton
-        , sidebarEditButtonConfig
-        , sidebarEntry
-        , sidebarEntryConfig
-        , sidebarEntryContent
-        , sidebarEntryTitle
-        )
+import Component.Sidebar.Entry as SidebarEntry exposing (SidebarEntry)
 import Fhir.Bundle exposing (Bundle)
 import Fhir.Http as FhirHttp
 import Fhir.Library as Library exposing (Library)
 import Fhir.PrimitiveTypes exposing (Canonical)
 import Html exposing (Html, a, text)
 import Json.Decode exposing (decodeValue)
+import Material.Button as Button
 import Route exposing (href)
 import Url.Builder as UrlBuilder
 
@@ -86,13 +78,13 @@ type alias Config msg =
 
 view : Config msg -> Model -> SidebarEntry msg
 view { onEdit } model =
-    sidebarEntry sidebarEntryConfig
-        [ sidebarEntryTitle []
+    SidebarEntry.view SidebarEntry.config
+        [ SidebarEntry.title []
             [ text "Library"
-            , sidebarEditButton
-                { sidebarEditButtonConfig | onClick = Just onEdit }
+            , SidebarEntry.editButton
+                (Button.config |> Button.setOnClick onEdit)
             ]
-        , sidebarEntryContent []
+        , SidebarEntry.content []
             [ libraryLink model ]
         ]
 

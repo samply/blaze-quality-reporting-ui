@@ -7,20 +7,9 @@ import Fhir.PrimitiveTypes exposing (Id)
 import Html exposing (Html, div, h3, p, text)
 import Html.Attributes exposing (class)
 import Loading exposing (Status(..))
-import Material.DataTable
-    exposing
-        ( DataTableRow
-        , dataTable
-        , dataTableCell
-        , dataTableCellConfig
-        , dataTableConfig
-        , dataTableHeaderCell
-        , dataTableHeaderCellConfig
-        , dataTableHeaderRow
-        , dataTableRow
-        , dataTableRowConfig
-        )
-import Material.List exposing (ListItem, list, listConfig, listItem, listItemConfig)
+import Material.DataTable as DataTable
+import Material.List as List
+import Material.List.Item as ListItem exposing (ListItem)
 import NaturalOrdering
 import Session exposing (Session)
 
@@ -119,15 +108,15 @@ viewPopulationPanel groupIdx populations =
             p [] [ text "No populations" ]
 
           else
-            list { listConfig | nonInteractive = True }
+            List.list (List.config |> List.setNonInteractive True)
                 (List.indexedMap (viewPopulation groupIdx) populations)
         ]
 
 
 viewPopulation : Int -> Int -> MeasureReport.Population -> ListItem Msg
 viewPopulation groupIdx populationIdx { code, count } =
-    listItem
-        listItemConfig
+    ListItem.listItem
+        ListItem.config
         [ text (populationType populationIdx code ++ ": " ++ countToString count)
         ]
 
@@ -161,24 +150,19 @@ viewStratifier groupIdx stratifierIdx stratifier =
             List.filterMap .text stratifier.code
 
         headerCell codeText =
-            dataTableHeaderCell
-                dataTableHeaderCellConfig
-                [ text codeText ]
+            DataTable.cell [] [ text codeText ]
     in
     div [ class "measure-report-stratifier" ]
         [ div [ class "measure-report-stratifier__title" ]
             [ h3 [ class "mdc-typography--headline6" ]
                 [ text (stratifierTitle stratifier.code) ]
             ]
-        , dataTable
-            dataTableConfig
+        , DataTable.dataTable
+            DataTable.config
             { thead =
-                [ dataTableHeaderRow [] <|
+                [ DataTable.row [] <|
                     List.map headerCell codeTexts
-                        ++ [ dataTableHeaderCell
-                                { dataTableHeaderCellConfig | numeric = True }
-                                [ text "Count" ]
-                           ]
+                        ++ [ DataTable.numericCell [] [ text "Count" ] ]
                 ]
             , tbody =
                 List.map (viewStratum codeTexts)
@@ -218,18 +202,18 @@ stratumValue stratum codeText =
             |> Maybe.withDefault "<unknown>"
 
 
-viewStratum : List String -> MeasureReport.Stratum -> DataTableRow Msg
+viewStratum : List String -> MeasureReport.Stratum -> DataTable.Row Msg
 viewStratum codeTexts stratum =
     let
         valueCell codeText =
-            dataTableCell dataTableCellConfig
+            DataTable.cell []
                 [ text (stratumValue stratum codeText) ]
 
         countCell population =
-            dataTableCell { dataTableCellConfig | numeric = True }
+            DataTable.numericCell []
                 [ population.count |> countToString |> text ]
     in
-    dataTableRow dataTableRowConfig
+    DataTable.row []
         (List.map valueCell codeTexts
             ++ List.map countCell stratum.population
         )
