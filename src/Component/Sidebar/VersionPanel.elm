@@ -1,8 +1,8 @@
-module Component.Sidebar.UrlPanel exposing (Model, Msg, init, update, view)
+module Component.Sidebar.VersionPanel exposing (Model, Msg, init, update, view)
 
-{-| This component is a canonical URL input box in the sidebar.
+{-| This component is a version input box in the sidebar.
 
-It can be used for Resources like Library or Measure which have canonical URLs.
+It can be used for Resources like Library or Measure which have versions.
 
 The component has a read-only view with an edit button which transforms the view
 into an editable view with save an cancel actions. The message constructor for
@@ -12,7 +12,6 @@ the onSave action can be supplied to the ['view'](#view) function.
 
 import Component.Sidebar.Entry as SidebarEntry exposing (SidebarEntry)
 import Events
-import Fhir.PrimitiveTypes exposing (Uri)
 import Html exposing (text)
 import Html.Attributes exposing (class)
 import Material.Button as Button
@@ -24,16 +23,16 @@ import Material.TextField as TextField
 
 
 type alias Model =
-    { originalUrl : Maybe Uri
-    , enteredUrl : Maybe Uri
+    { originalVersion : Maybe String
+    , enteredVersion : Maybe String
     , edit : Bool
     }
 
 
-init : Maybe Uri -> Model
-init url =
-    { originalUrl = url
-    , enteredUrl = url
+init : Maybe String -> Model
+init version =
+    { originalVersion = version
+    , enteredVersion = version
     , edit = False
     }
 
@@ -45,7 +44,7 @@ init url =
 type Msg
     = ClickedEdit
     | ClickedCancel
-    | EnteredUrl String
+    | EnteredVersion String
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -55,12 +54,12 @@ update msg model =
             ( { model | edit = True }, Cmd.none )
 
         ClickedCancel ->
-            ( { model | enteredUrl = model.originalUrl, edit = False }
+            ( { model | enteredVersion = model.originalVersion, edit = False }
             , Cmd.none
             )
 
-        EnteredUrl s ->
-            ( { model | enteredUrl = Just s }, Cmd.none )
+        EnteredVersion s ->
+            ( { model | enteredVersion = Just s }, Cmd.none )
 
 
 
@@ -69,16 +68,16 @@ update msg model =
 
 type alias Config msg =
     { onMsg : Msg -> msg
-    , onSave : Maybe Uri -> msg
+    , onSave : Maybe String -> msg
     }
 
 
 view : Config msg -> Model -> SidebarEntry msg
-view { onMsg, onSave } { originalUrl, enteredUrl, edit } =
+view { onMsg, onSave } { originalVersion, enteredVersion, edit } =
     SidebarEntry.view
-        (SidebarEntry.config |> SidebarEntry.setAttributes [ class "url-panel" ])
+        (SidebarEntry.config |> SidebarEntry.setAttributes [ class "version-panel" ])
         [ SidebarEntry.title []
-            [ text "URL"
+            [ text "Version"
             , SidebarEntry.editButton
                 (Button.config |> Button.setOnClick (onMsg ClickedEdit))
             ]
@@ -86,21 +85,21 @@ view { onMsg, onSave } { originalUrl, enteredUrl, edit } =
             if edit then
                 [ TextField.outlined
                     (TextField.config
-                        |> TextField.setValue enteredUrl
-                        |> TextField.setOnInput (EnteredUrl >> onMsg)
+                        |> TextField.setValue enteredVersion
+                        |> TextField.setOnInput (EnteredVersion >> onMsg)
                         |> TextField.setAttributes
                             [ Events.onEnterEsc
-                                (onSave enteredUrl)
+                                (onSave enteredVersion)
                                 (onMsg ClickedCancel)
                             ]
                     )
                 ]
 
             else
-                [ originalUrl |> Maybe.withDefault "<not-specified>" |> text ]
+                [ originalVersion |> Maybe.withDefault "<not-specified>" |> text ]
         , SidebarEntry.actionButtons [] <|
             if edit then
-                [ saveButton (onSave enteredUrl)
+                [ saveButton (onSave enteredVersion)
                 , cancelButton (onMsg ClickedCancel)
                 ]
 

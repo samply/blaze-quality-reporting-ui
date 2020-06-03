@@ -4,7 +4,7 @@ module Page.Measure.Sidebar.Subject exposing (Model, Msg, init, update, view)
 -}
 
 import Component.Sidebar.Entry as SidebarEntry exposing (SidebarEntry)
-import Events exposing (onEnterEsc)
+import Events
 import Html exposing (text)
 import Material.Button as Button
 import Material.TextField as TextField
@@ -18,6 +18,7 @@ type alias Model =
     { originalSubject : String
     , enteredSubject : Maybe String
     , edit : Bool
+    , valid : Bool
     }
 
 
@@ -26,6 +27,7 @@ init subject =
     { originalSubject = subject
     , enteredSubject = Just subject
     , edit = False
+    , valid = True
     }
 
 
@@ -54,7 +56,12 @@ update msg model =
             )
 
         EnteredSubject subject ->
-            ( { model | enteredSubject = Just subject }, Cmd.none )
+            ( { model
+                | enteredSubject = Just subject
+                , valid = not (String.isEmpty subject)
+              }
+            , Cmd.none
+            )
 
 
 
@@ -68,7 +75,7 @@ type alias Config msg =
 
 
 view : Config msg -> Model -> SidebarEntry msg
-view { onMsg, onSave } { originalSubject, enteredSubject, edit } =
+view { onMsg, onSave } { originalSubject, enteredSubject, edit, valid } =
     SidebarEntry.view SidebarEntry.config
         [ SidebarEntry.title []
             [ text "Subject"
@@ -81,11 +88,16 @@ view { onMsg, onSave } { originalSubject, enteredSubject, edit } =
                     (TextField.config
                         |> TextField.setValue enteredSubject
                         |> TextField.setRequired True
+                        |> TextField.setValid (Debug.log "valid" valid)
                         |> TextField.setOnInput (EnteredSubject >> onMsg)
                         |> TextField.setAttributes
-                            [ onEnterEsc
-                                (onSave enteredSubject)
-                                (onMsg ClickedCancel)
+                            [ if valid then
+                                Events.onEnterEsc
+                                    (onSave enteredSubject)
+                                    (onMsg ClickedCancel)
+
+                              else
+                                Events.onEsc (onMsg ClickedCancel)
                             ]
                     )
                 ]
@@ -94,14 +106,25 @@ view { onMsg, onSave } { originalSubject, enteredSubject, edit } =
                 [ text originalSubject ]
         , SidebarEntry.actionButtons [] <|
             if edit then
-                [ Button.unelevated
-                    (Button.config |> Button.setOnClick (onSave enteredSubject))
-                    "save"
-                , Button.outlined
-                    (Button.config |> Button.setOnClick (onMsg ClickedCancel))
-                    "cancel"
+                [ saveButton (not valid) (onSave enteredSubject)
+                , cancelButton (onMsg ClickedCancel)
                 ]
 
             else
                 []
         ]
+
+
+saveButton disabled onClick =
+    Button.unelevated
+        (Button.config
+            |> Button.setDisabled disabled
+            |> Button.setOnClick onClick
+        )
+        "save"
+
+
+cancelButton onClick =
+    Button.outlined
+        (Button.config |> Button.setOnClick onClick)
+        "cancel"

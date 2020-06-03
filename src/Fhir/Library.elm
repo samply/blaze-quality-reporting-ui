@@ -14,6 +14,7 @@ import Json.Encode as Encode exposing (Value)
 type alias Library =
     { id : Maybe Id
     , url : Maybe Uri
+    , version : Maybe String
     , name : Maybe String
     , title : Maybe String
     , status : Status
@@ -46,6 +47,7 @@ encode library =
         [ pair "resourceType" Encode.string "Library"
         , optionalPair "id" Encode.string library.id
         , optionalPair "url" Encode.string library.url
+        , optionalPair "version" Encode.string library.version
         , optionalPair "name" Encode.string library.name
         , optionalPair "title" Encode.string library.title
         , pair "status" encodeStatus library.status
@@ -77,6 +79,7 @@ decoder =
     succeed Library
         |> optional "id" (maybe string) Nothing
         |> optional "url" (maybe string) Nothing
+        |> optional "version" (maybe string) Nothing
         |> optional "name" (maybe string) Nothing
         |> optional "title" (maybe string) Nothing
         |> optional "status" statusDecoder Unknown

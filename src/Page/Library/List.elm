@@ -116,6 +116,7 @@ createLibrary base =
         library =
             { id = Nothing
             , url = Nothing
+            , version = Nothing
             , name = Nothing
             , title = Nothing
             , status = Library.Draft

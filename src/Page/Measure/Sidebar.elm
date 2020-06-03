@@ -3,6 +3,7 @@ module Page.Measure.Sidebar exposing (Model, Msg, init, update, view)
 import Component.Sidebar as Sidebar
 import Component.Sidebar.SharePanel as SharePanel
 import Component.Sidebar.UrlPanel as UrlPanel
+import Component.Sidebar.VersionPanel as VersionPanel
 import Fhir.Measure as Measure exposing (Measure)
 import Html exposing (Html)
 import Page.Measure.Sidebar.Library as Library
@@ -18,6 +19,7 @@ type alias Model =
     { measure : Measure
     , sharePanel : SharePanel.Model
     , urlPanel : UrlPanel.Model
+    , versionPanel : VersionPanel.Model
     , subject : Subject.Model
     , library : Library.Model
     }
@@ -32,6 +34,7 @@ init base measure =
     ( { measure = measure
       , sharePanel = SharePanel.init
       , urlPanel = UrlPanel.init measure.url
+      , versionPanel = VersionPanel.init measure.version
       , subject = Subject.init (Measure.getSubjectCode measure)
       , library = library
       }
@@ -46,6 +49,7 @@ init base measure =
 type Msg
     = GotShareMsg SharePanel.Msg
     | GotUrlMsg UrlPanel.Msg
+    | GotVersionMsg VersionPanel.Msg
     | GotSubjectMsg Subject.Msg
     | GotLibraryMsg Library.Msg
 
@@ -66,6 +70,13 @@ update msg model =
                     UrlPanel.update msg_ model.urlPanel
             in
             ( { model | urlPanel = url }, Cmd.map GotUrlMsg cmd )
+
+        GotVersionMsg msg_ ->
+            let
+                ( version, cmd ) =
+                    VersionPanel.update msg_ model.versionPanel
+            in
+            ( { model | versionPanel = version }, Cmd.map GotVersionMsg cmd )
 
         GotSubjectMsg msg_ ->
             let
@@ -98,6 +109,7 @@ view config model =
     Sidebar.view Sidebar.config
         [ viewSharePanel config model
         , viewUrlPanel config model
+        , viewVersionPanel config model
         , viewSubject config model
         , viewLibrary config model
         ]
@@ -118,6 +130,14 @@ viewUrlPanel { onMsg, onSave } { measure, urlPanel } =
         , onSave = \url -> onSave { measure | url = url }
         }
         urlPanel
+
+
+viewVersionPanel { onMsg, onSave } { measure, versionPanel } =
+    VersionPanel.view
+        { onMsg = GotVersionMsg >> onMsg
+        , onSave = \version -> onSave { measure | version = version }
+        }
+        versionPanel
 
 
 viewSubject { onMsg, onSave } ({ measure } as model) =
