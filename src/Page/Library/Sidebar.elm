@@ -2,9 +2,10 @@ module Page.Library.Sidebar exposing (Model, Msg, init, update, view)
 
 import Component.Sidebar as Sidebar
 import Component.Sidebar.SharePanel as SharePanel
+import Component.Sidebar.SubjectPanel as SubjectPanel
 import Component.Sidebar.UrlPanel as UrlPanel
 import Component.Sidebar.VersionPanel as VersionPanel
-import Fhir.Library exposing (Library)
+import Fhir.Library as Library exposing (Library)
 import Html exposing (Html)
 import Session exposing (Server)
 
@@ -18,6 +19,7 @@ type alias Model =
     , sharePanel : SharePanel.Model
     , urlPanel : UrlPanel.Model
     , versionPanel : VersionPanel.Model
+    , subjectPanel : SubjectPanel.Model
     }
 
 
@@ -27,6 +29,7 @@ init library =
     , sharePanel = SharePanel.init
     , urlPanel = UrlPanel.init library.url
     , versionPanel = VersionPanel.init library.version
+    , subjectPanel = SubjectPanel.init (Library.getSubjectCode library)
     }
 
 
@@ -38,6 +41,7 @@ type Msg
     = GotShareMsg SharePanel.Msg
     | GotUrlMsg UrlPanel.Msg
     | GotVersionMsg VersionPanel.Msg
+    | GotSubjectMsg SubjectPanel.Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -64,6 +68,13 @@ update msg model =
             in
             ( { model | versionPanel = version }, Cmd.map GotVersionMsg cmd )
 
+        GotSubjectMsg msg_ ->
+            let
+                ( subject, cmd ) =
+                    SubjectPanel.update msg_ model.subjectPanel
+            in
+            ( { model | subjectPanel = subject }, Cmd.map GotSubjectMsg cmd )
+
 
 
 -- VIEW
@@ -83,6 +94,7 @@ view config model =
         [ viewSharePanel config model
         , viewUrlPanel config model
         , viewVersionPanel config model
+        , viewSubjectPanel config model
         ]
 
 
@@ -109,3 +121,11 @@ viewVersionPanel { onMsg, onSave } { library, versionPanel } =
         , onSave = \version -> onSave { library | version = version }
         }
         versionPanel
+
+
+viewSubjectPanel { onMsg, onSave } { library, subjectPanel } =
+    SubjectPanel.view
+        { onMsg = GotSubjectMsg >> onMsg
+        , onSave = \code -> onSave (Library.setSubjectCode code library)
+        }
+        subjectPanel

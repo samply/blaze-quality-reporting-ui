@@ -1,4 +1,4 @@
-module Page.Measure.Sidebar.Library exposing (Model, Msg, init, update, view)
+module Page.Measure.Sidebar.LibraryPanel exposing (Model, Msg, init, update, view)
 
 import Component.Sidebar.Entry as SidebarEntry exposing (SidebarEntry)
 import Fhir.Bundle exposing (Bundle)

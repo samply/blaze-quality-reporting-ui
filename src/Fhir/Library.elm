@@ -1,4 +1,12 @@
-module Fhir.Library exposing (Library, Status(..), decoder, encode, type_)
+module Fhir.Library exposing
+    ( Library
+    , Status(..)
+    , decoder
+    , encode
+    , getSubjectCode
+    , setSubjectCode
+    , type_
+    )
 
 import Fhir.Attachment as Attachment exposing (Attachment)
 import Fhir.CodeableConcept as CodeableConcept exposing (CodeableConcept)
@@ -39,6 +47,44 @@ type_ code =
     , version = Nothing
     , code = Just code
     }
+
+
+getSubjectCode : Library -> String
+getSubjectCode =
+    .subjectCodeableConcept
+        >> Maybe.andThen getResourceTypeCode
+        >> Maybe.withDefault "Patient"
+
+
+getResourceTypeCode =
+    CodeableConcept.getCodeOf "http://hl7.org/fhir/resource-types"
+
+
+setSubjectCode : Maybe String -> Library -> Library
+setSubjectCode code measure =
+    case code of
+        Just c ->
+            case measure.subjectCodeableConcept of
+                Just subject ->
+                    { measure | subjectCodeableConcept = Just (setResourceTypeCode c subject) }
+
+                Nothing ->
+                    { measure | subjectCodeableConcept = Just (subjectCodeableConcept c) }
+
+        Nothing ->
+            { measure | subjectCodeableConcept = Nothing }
+
+
+setResourceTypeCode =
+    CodeableConcept.setCodeOf "http://hl7.org/fhir/resource-types"
+
+
+subjectCodeableConcept code =
+    CodeableConcept.ofOneCoding
+        { system = Just "http://hl7.org/fhir/resource-types"
+        , version = Nothing
+        , code = Just code
+        }
 
 
 encode : Library -> Value

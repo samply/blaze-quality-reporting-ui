@@ -2,12 +2,12 @@ module Page.Measure.Sidebar exposing (Model, Msg, init, update, view)
 
 import Component.Sidebar as Sidebar
 import Component.Sidebar.SharePanel as SharePanel
+import Component.Sidebar.SubjectPanel as SubjectPanel
 import Component.Sidebar.UrlPanel as UrlPanel
 import Component.Sidebar.VersionPanel as VersionPanel
 import Fhir.Measure as Measure exposing (Measure)
 import Html exposing (Html)
-import Page.Measure.Sidebar.Library as Library
-import Page.Measure.Sidebar.Subject as Subject
+import Page.Measure.Sidebar.LibraryPanel as LibraryPanel
 import Session exposing (Server)
 
 
@@ -20,23 +20,23 @@ type alias Model =
     , sharePanel : SharePanel.Model
     , urlPanel : UrlPanel.Model
     , versionPanel : VersionPanel.Model
-    , subject : Subject.Model
-    , library : Library.Model
+    , subjectPanel : SubjectPanel.Model
+    , libraryPanel : LibraryPanel.Model
     }
 
 
 init : String -> Measure -> ( Model, Cmd Msg )
 init base measure =
     let
-        ( library, cmd ) =
-            Library.init base (List.head measure.library)
+        ( libraryPanel, cmd ) =
+            LibraryPanel.init base (List.head measure.library)
     in
     ( { measure = measure
       , sharePanel = SharePanel.init
       , urlPanel = UrlPanel.init measure.url
       , versionPanel = VersionPanel.init measure.version
-      , subject = Subject.init (Measure.getSubjectCode measure)
-      , library = library
+      , subjectPanel = SubjectPanel.init (Measure.getSubjectCode measure)
+      , libraryPanel = libraryPanel
       }
     , Cmd.map GotLibraryMsg cmd
     )
@@ -50,8 +50,8 @@ type Msg
     = GotShareMsg SharePanel.Msg
     | GotUrlMsg UrlPanel.Msg
     | GotVersionMsg VersionPanel.Msg
-    | GotSubjectMsg Subject.Msg
-    | GotLibraryMsg Library.Msg
+    | GotSubjectMsg SubjectPanel.Msg
+    | GotLibraryMsg LibraryPanel.Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -81,12 +81,12 @@ update msg model =
         GotSubjectMsg msg_ ->
             let
                 ( subject, cmd ) =
-                    Subject.update msg_ model.subject
+                    SubjectPanel.update msg_ model.subjectPanel
             in
-            ( { model | subject = subject }, Cmd.map GotSubjectMsg cmd )
+            ( { model | subjectPanel = subject }, Cmd.map GotSubjectMsg cmd )
 
         GotLibraryMsg msg_ ->
-            ( { model | library = Library.update msg_ model.library }
+            ( { model | libraryPanel = LibraryPanel.update msg_ model.libraryPanel }
             , Cmd.none
             )
 
@@ -110,8 +110,8 @@ view config model =
         [ viewSharePanel config model
         , viewUrlPanel config model
         , viewVersionPanel config model
-        , viewSubject config model
-        , viewLibrary config model
+        , viewSubjectPanel config model
+        , viewLibraryPanel config model
         ]
 
 
@@ -140,13 +140,13 @@ viewVersionPanel { onMsg, onSave } { measure, versionPanel } =
         versionPanel
 
 
-viewSubject { onMsg, onSave } ({ measure } as model) =
-    Subject.view
+viewSubjectPanel { onMsg, onSave } { measure, subjectPanel } =
+    SubjectPanel.view
         { onMsg = GotSubjectMsg >> onMsg
         , onSave = \code -> onSave (Measure.setSubjectCode code measure)
         }
-        model.subject
+        subjectPanel
 
 
-viewLibrary { onLibraryEdit } { library } =
-    Library.view { onEdit = onLibraryEdit } library
+viewLibraryPanel { onLibraryEdit } { libraryPanel } =
+    LibraryPanel.view { onEdit = onLibraryEdit } libraryPanel

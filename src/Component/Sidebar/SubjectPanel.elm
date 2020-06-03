@@ -1,4 +1,4 @@
-module Page.Measure.Sidebar.Subject exposing (Model, Msg, init, update, view)
+module Component.Sidebar.SubjectPanel exposing (Model, Msg, init, update, view)
 
 {-| This component is the subject input box in the sidebar.
 -}
