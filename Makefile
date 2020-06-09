@@ -1,4 +1,4 @@
-VERSION = "0.6.0"
+VERSION = "0.7.0"
 
 build:
 	elm make src/Main.elm --optimize --output=main.js

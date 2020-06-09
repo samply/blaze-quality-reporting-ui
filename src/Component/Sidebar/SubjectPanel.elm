@@ -88,7 +88,7 @@ view { onMsg, onSave } { originalSubject, enteredSubject, edit, valid } =
                     (TextField.config
                         |> TextField.setValue enteredSubject
                         |> TextField.setRequired True
-                        |> TextField.setValid (Debug.log "valid" valid)
+                        |> TextField.setValid valid
                         |> TextField.setOnInput (EnteredSubject >> onMsg)
                         |> TextField.setAttributes
                             [ if valid then
