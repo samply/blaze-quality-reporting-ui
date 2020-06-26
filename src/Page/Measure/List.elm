@@ -34,7 +34,7 @@ init session =
     ( { session = session
       , measures = Loading
       }
-    , searchMeasures (Session.getBase session) ""
+    , searchMeasures (Session.getBase session) "Patient,Specimen"
     )
 
 
@@ -99,7 +99,7 @@ searchMeasures base query =
                 []
 
             else
-                [ UrlBuilder.string "title:contains" query ]
+                [ UrlBuilder.string "title" query ]
     in
     FhirHttp.searchType CompletedLoadMeasures base "Measure" params
 
