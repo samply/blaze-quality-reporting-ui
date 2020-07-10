@@ -34,7 +34,7 @@ init session =
     ( { session = session
       , measures = Loading
       }
-    , searchMeasures (Session.getBase session) "Patient,Specimen"
+    , searchMeasures (Session.getBase session) ""
     )
 
 
