@@ -1,7 +1,7 @@
 VERSION = "0.7.2"
 
 build:
-	elm make src/Main.elm --optimize --output=main.js
+	npm run prod
 	docker build -t samply/blaze-quality-reporting-ui:${VERSION} .
 
 push:

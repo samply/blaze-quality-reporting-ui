@@ -20,25 +20,21 @@ http://localhost:8000
 
 ## Development
 
-Install http-server:
-
 ```bash
-npm install http-server -g
+npm start
 ```
 
-Compile Elm to main.js:
-
-```bash
-make build-dev
+Open in your browser:
+```
+http://localhost:3000
 ```
 
-Start the http-server:
+### Production Build
 
 ```bash
-http-server -p 8000
+npm run prod
+docker build -t samply/blaze-quality-reporting-ui:0.7.2
 ```
-
-Keep the server running and recompile on every change. Keep the dev tools in Chrome open and disable caching. Reload the current page to see changes.
 
 ## License
 
