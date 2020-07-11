@@ -98,7 +98,7 @@ body {
   background-color: #fff;
 }
 
-.sidebar-entry__action-buttons mdc-button:not(:first-child) {
+.sidebar-entry__action-buttons .mdc-touch-target-wrapper:not(:first-child) {
   margin-left: 0.5rem
 }
 

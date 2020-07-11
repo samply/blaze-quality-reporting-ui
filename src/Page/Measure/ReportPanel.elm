@@ -161,14 +161,7 @@ view config model =
             ( Just _, Just _ ) ->
                 case model.reports of
                     Loading.Loaded reports ->
-                        if List.isEmpty reports then
-                            emptyListPlaceholder config.onMsg
-
-                        else
-                            div []
-                                [ viewReportList config.onReportClick reports
-                                , generateButton config.onMsg
-                                ]
+                        viewReportList config.onMsg config.onReportClick reports
 
                     Loading.Loading ->
                         text ""
@@ -203,20 +196,25 @@ missingLibraryMessage onLibraryAssoc =
         ]
 
 
-emptyListPlaceholder onMsg =
-    div [ class "measure-report-panel__empty-placeholder" ]
-        [ generateButton onMsg ]
+viewReportList onMsg onReportClick reports =
+    div []
+        (case reports of
+            report :: moreReports ->
+                [ List.list List.config
+                    (viewReport onReportClick report)
+                    (List.map (viewReport onReportClick) moreReports)
+                , generateButton onMsg "Generate New Report"
+                ]
+
+            _ ->
+                [ generateButton onMsg "Generate First Report" ]
+        )
 
 
-generateButton onMsg =
+generateButton onMsg label =
     Button.outlined
         (Button.config |> Button.setOnClick (onMsg ClickedGenerate))
-        "Generate First Report"
-
-
-viewReportList onReportClick reports =
-    List.list List.config <|
-        List.map (viewReport onReportClick) reports
+        label
 
 
 viewReport onReportClick ({ status, date } as report) =

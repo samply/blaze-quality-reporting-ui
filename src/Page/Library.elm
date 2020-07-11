@@ -121,7 +121,9 @@ update msg model =
             )
 
         CompletedLoadLibrary (Ok library) ->
-            ( { model | data = loaded library }, Cmd.none )
+            ( { model | data = loaded (Session.getBase model.session) library }
+            , Cmd.none
+            )
 
         CompletedLoadLibrary (Err error) ->
             ( { model | data = Failed error }
@@ -129,13 +131,17 @@ update msg model =
             )
 
         CompletedSaveLibrary (Ok library) ->
-            ( { model | data = loaded library }, Cmd.none )
+            ( { model | data = loaded (Session.getBase model.session) library }
+            , Cmd.none
+            )
 
         CompletedSaveLibrary (Err _) ->
             ( model, Cmd.none )
 
         CompletedDuplicateLibrary (Ok library) ->
-            ( { model | data = loaded library }, Cmd.none )
+            ( { model | data = loaded (Session.getBase model.session) library }
+            , Cmd.none
+            )
 
         CompletedDuplicateLibrary (Err _) ->
             ( model, Cmd.none )
@@ -207,11 +213,11 @@ updateDataWithCmd f model =
             ( model, Cmd.none )
 
 
-loaded library =
+loaded base library =
     Loaded
         { library = library
         , header = Header.init library.title library.description
-        , sidebar = Sidebar.init library
+        , sidebar = Sidebar.init base library
         , cqlPanel = CqlPanel.init (library.content |> List.head)
         }
 

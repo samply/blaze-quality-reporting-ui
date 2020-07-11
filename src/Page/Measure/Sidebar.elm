@@ -9,6 +9,7 @@ import Fhir.Measure as Measure exposing (Measure)
 import Html exposing (Html)
 import Page.Measure.Sidebar.LibraryPanel as LibraryPanel
 import Session exposing (Server)
+import Url.Builder as UrlBuilder
 
 
 
@@ -17,11 +18,11 @@ import Session exposing (Server)
 
 type alias Model =
     { measure : Measure
-    , sharePanel : SharePanel.Model
     , urlPanel : UrlPanel.Model
     , versionPanel : VersionPanel.Model
     , subjectPanel : SubjectPanel.Model
     , libraryPanel : LibraryPanel.Model
+    , sharePanel : SharePanel.Model
     }
 
 
@@ -30,13 +31,18 @@ init base measure =
     let
         ( libraryPanel, cmd ) =
             LibraryPanel.init base (List.head measure.library)
+
+        url =
+            Maybe.map
+                (\id -> UrlBuilder.crossOrigin base [ "Measure", id ] [])
+                measure.id
     in
     ( { measure = measure
-      , sharePanel = SharePanel.init
       , urlPanel = UrlPanel.init measure.url
       , versionPanel = VersionPanel.init measure.version
       , subjectPanel = SubjectPanel.init (Measure.getSubjectCode measure)
       , libraryPanel = libraryPanel
+      , sharePanel = SharePanel.init url
       }
     , Cmd.map GotLibraryMsg cmd
     )
@@ -107,11 +113,11 @@ type alias Config msg =
 view : Config msg -> Model -> Html msg
 view config model =
     Sidebar.view Sidebar.config
-        [ viewSharePanel config model
-        , viewUrlPanel config model
+        [ viewUrlPanel config model
         , viewVersionPanel config model
         , viewSubjectPanel config model
         , viewLibraryPanel config model
+        , viewSharePanel config model
         ]
 
 

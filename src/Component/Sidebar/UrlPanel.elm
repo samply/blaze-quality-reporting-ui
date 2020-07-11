@@ -111,11 +111,17 @@ view { onMsg, onSave } { originalUrl, enteredUrl, edit } =
 
 saveButton onClick =
     Button.unelevated
-        (Button.config |> Button.setOnClick onClick)
+        (Button.config
+            |> Button.setDense True
+            |> Button.setOnClick onClick
+        )
         "save"
 
 
 cancelButton onClick =
     Button.outlined
-        (Button.config |> Button.setOnClick onClick)
+        (Button.config
+            |> Button.setDense True
+            |> Button.setOnClick onClick
+        )
         "cancel"

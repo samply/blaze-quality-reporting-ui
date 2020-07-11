@@ -118,6 +118,7 @@ view { onMsg, onSave } { originalSubject, enteredSubject, edit, valid } =
 saveButton disabled onClick =
     Button.unelevated
         (Button.config
+            |> Button.setDense True
             |> Button.setDisabled disabled
             |> Button.setOnClick onClick
         )
@@ -126,5 +127,8 @@ saveButton disabled onClick =
 
 cancelButton onClick =
     Button.outlined
-        (Button.config |> Button.setOnClick onClick)
+        (Button.config
+            |> Button.setDense True
+            |> Button.setOnClick onClick
+        )
         "cancel"

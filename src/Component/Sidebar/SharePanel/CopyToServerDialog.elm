@@ -97,23 +97,21 @@ view { servers, onMsg, onSelect } model =
         )
         { title = Just "Copy to Server"
         , content =
-            [ if List.isEmpty servers then
-                emptyListPlaceholder
-
-              else
-                serverList onSelect servers
+            [ serverList onSelect servers
             ]
         , actions = []
         }
 
 
-emptyListPlaceholder =
-    text "no libraries available"
-
-
 serverList onSelect servers =
-    List.list (List.config |> List.setTwoLine True) <|
-        List.map (serverListItem onSelect) servers
+    case servers of
+        server :: moreServers ->
+            List.list (List.config |> List.setTwoLine True)
+                (serverListItem onSelect server)
+                (List.map (serverListItem onSelect) moreServers)
+
+        _ ->
+            text "no servers available"
 
 
 serverListItem onSelect server =

@@ -104,12 +104,14 @@ viewPopulationPanel : Int -> List MeasureReport.Population -> Html Msg
 viewPopulationPanel groupIdx populations =
     div [ class "measure-report-population-panel" ]
         [ h3 [ class "mdc-typography--headline5" ] [ text "Populations" ]
-        , if List.isEmpty populations then
-            p [] [ text "No populations" ]
+        , case populations of
+            population :: morePopulations ->
+                List.list (List.config |> List.setNonInteractive True)
+                    (viewPopulation groupIdx 0 population)
+                    (List.indexedMap (\idx -> viewPopulation groupIdx (idx + 1)) morePopulations)
 
-          else
-            List.list (List.config |> List.setNonInteractive True)
-                (List.indexedMap (viewPopulation groupIdx) populations)
+            _ ->
+                p [] [ text "No populations" ]
         ]
 
 

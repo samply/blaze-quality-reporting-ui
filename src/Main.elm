@@ -5,6 +5,7 @@ import Browser.Navigation as Nav
 import Json.Decode as Decode exposing (Decoder, decodeString, decodeValue, succeed)
 import Json.Decode.Pipeline exposing (optional)
 import Json.Encode exposing (Value)
+import Material.Snackbar as Snackbar
 import Page
 import Page.Blank as Blank
 import Page.Help as Help
@@ -15,6 +16,7 @@ import Page.Measure.List as MeasureList
 import Page.MeasureReport as MeasureReport
 import Page.NotFound as NotFound
 import Page.Settings as Settings
+import Ports
 import Route exposing (Route)
 import Session exposing (Session)
 import Url exposing (Url)
@@ -27,6 +29,7 @@ import Url exposing (Url)
 type alias Model =
     { drawerOpen : Bool
     , page : Page
+    , snackbarQueue : Snackbar.Queue Msg
     }
 
 
@@ -56,6 +59,7 @@ init flagsValue url navKey =
     changeRouteTo (Route.fromUrl url)
         { drawerOpen = False
         , page = Redirect flags.session
+        , snackbarQueue = Snackbar.initialQueue
         }
 
 
@@ -86,6 +90,8 @@ type Msg
     | ClickedNavIcon
     | ClickedNavItem Page.NavItem
     | ClosedDrawer
+    | ClosedSnackbar Snackbar.MessageId
+    | GotClipboardSuccess Value
     | GotLibraryListMsg LibraryList.Msg
     | GotLibraryMsg Library.Msg
     | GotMeasureListMsg MeasureList.Msg
@@ -138,6 +144,20 @@ update msg model =
 
         ( ClosedDrawer, _ ) ->
             ( { model | drawerOpen = False }, Cmd.none )
+
+        ( ClosedSnackbar messageId, _ ) ->
+            ( { model | snackbarQueue = Snackbar.close messageId model.snackbarQueue }
+            , Cmd.none
+            )
+
+        ( GotClipboardSuccess _, _ ) ->
+            let
+                message =
+                    Snackbar.message "Copied successful."
+            in
+            ( { model | snackbarQueue = Snackbar.addMessage message model.snackbarQueue }
+            , Cmd.none
+            )
 
         ( GotLibraryListMsg subMsg, LibraryList libraryList ) ->
             LibraryList.update subMsg libraryList
@@ -276,7 +296,7 @@ updateWith toModel toMsg model ( subModel, subCmd ) =
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Sub.none
+    Ports.clipboardSuccess GotClipboardSuccess
 
 
 
@@ -288,8 +308,10 @@ view model =
     let
         pageViewConfig =
             { onDrawerClose = ClosedDrawer
+            , onSnackbarClose = ClosedSnackbar
             , onNavIconClick = ClickedNavIcon
             , onNavItemClick = ClickedNavItem
+            , snackbarQueue = model.snackbarQueue
             }
 
         viewPage toMsg config =

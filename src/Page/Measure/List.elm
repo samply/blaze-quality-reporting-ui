@@ -175,12 +175,7 @@ view model =
         case model.measures of
             Loaded measures ->
                 div [ class "main-content measure-list-page" ]
-                    [ if List.isEmpty measures then
-                        emptyListPlaceholder
-
-                      else
-                        measureList measures
-                    ]
+                    [ measureList measures ]
 
             Loading ->
                 text ""
@@ -194,20 +189,22 @@ view model =
     }
 
 
-emptyListPlaceholder =
-    div [ class "measure-list-page__empty-placeholder" ]
-        [ Button.text
-            (Button.config |> Button.setOnClick ClickedCreateMeasure)
-            "create the first measure"
-        ]
-
-
 measureList measures =
-    div [ class "measure-list-page__list" ]
-        [ createButton
-        , List.list List.config <|
-            List.map measureListItem measures
-        ]
+    case measures of
+        measure :: moreMeasures ->
+            div [ class "measure-list-page__list" ]
+                [ createButton
+                , List.list List.config
+                    (measureListItem measure)
+                    (List.map measureListItem moreMeasures)
+                ]
+
+        _ ->
+            div [ class "measure-list-page__empty-placeholder" ]
+                [ Button.text
+                    (Button.config |> Button.setOnClick ClickedCreateMeasure)
+                    "create the first measure"
+                ]
 
 
 measureListItem measure =

@@ -2,8 +2,8 @@ module Component.Sidebar.SharePanel exposing (Model, Msg, init, update, view)
 
 import Component.Sidebar.Entry as SidebarEntry exposing (SidebarEntry)
 import Component.Sidebar.SharePanel.CopyToServerDialog as CopyToServerDialog
-import Html exposing (text)
-import Material.IconButton as IconButton
+import Material.Button as Button
+import Ports
 import Session exposing (Server)
 
 
@@ -12,12 +12,16 @@ import Session exposing (Server)
 
 
 type alias Model =
-    { copyToServerDialog : CopyToServerDialog.Model }
+    { apiUrl : Maybe String
+    , copyToServerDialog : CopyToServerDialog.Model
+    }
 
 
-init : Model
-init =
-    { copyToServerDialog = CopyToServerDialog.init }
+init : Maybe String -> Model
+init apiUrl =
+    { apiUrl = apiUrl
+    , copyToServerDialog = CopyToServerDialog.init
+    }
 
 
 
@@ -26,6 +30,7 @@ init =
 
 type Msg
     = ClickedCopyToServer
+    | ClickedCopyApiUrlToClipboard
     | GotCopyToServerDialogMsg CopyToServerDialog.Msg
 
 
@@ -34,6 +39,12 @@ update msg model =
     case msg of
         ClickedCopyToServer ->
             updateCopyToServerDialog CopyToServerDialog.doOpen model
+
+        ClickedCopyApiUrlToClipboard ->
+            ( model
+            , Maybe.map Ports.writeToClipboard model.apiUrl
+                |> Maybe.withDefault Cmd.none
+            )
 
         GotCopyToServerDialogMsg msg_ ->
             updateCopyToServerDialog (CopyToServerDialog.update msg_) model
@@ -64,13 +75,19 @@ view : Config msg -> Model -> SidebarEntry msg
 view { servers, onMsg, onCopyToServer } { copyToServerDialog } =
     SidebarEntry.view SidebarEntry.config
         [ viewCopyToServerDialog servers onMsg onCopyToServer copyToServerDialog
-        , SidebarEntry.title []
-            [ text "Share"
-            ]
-        , SidebarEntry.content []
-            [ IconButton.iconButton
-                (IconButton.config |> IconButton.setOnClick (onMsg ClickedCopyToServer))
-                "share"
+        , SidebarEntry.actionButtons []
+            [ Button.outlined
+                (Button.config
+                    |> Button.setDense True
+                    |> Button.setOnClick (onMsg ClickedCopyToServer)
+                )
+                "Share"
+            , Button.outlined
+                (Button.config
+                    |> Button.setDense True
+                    |> Button.setOnClick (onMsg ClickedCopyApiUrlToClipboard)
+                )
+                "Copy URL"
             ]
         ]
 

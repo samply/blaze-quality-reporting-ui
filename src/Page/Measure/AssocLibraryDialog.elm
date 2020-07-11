@@ -163,23 +163,21 @@ view { onMsg, onSelect } model =
                     |> TextField.setOnInput (EnteredSearch >> onMsg)
                     |> TextField.setFullwidth True
                 )
-            , if List.isEmpty libraries then
-                emptyListPlaceholder
-
-              else
-                libraryList onSelect libraries
+            , libraryList onSelect libraries
             ]
         , actions = []
         }
 
 
-emptyListPlaceholder =
-    text "no libraries available"
-
-
 libraryList onSelect libraries =
-    List.list (List.config |> List.setTwoLine True) <|
-        List.map (libraryListItem onSelect) libraries
+    case libraries of
+        library :: moreLibraries ->
+            List.list (List.config |> List.setTwoLine True)
+                (libraryListItem onSelect library)
+                (List.map (libraryListItem onSelect) moreLibraries)
+
+        _ ->
+            text "no libraries available"
 
 
 libraryListItem onSelect library =

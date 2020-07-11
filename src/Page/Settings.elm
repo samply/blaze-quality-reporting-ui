@@ -258,15 +258,29 @@ serverListCard servers =
 
 serverList : Zipper Server -> Html Msg
 serverList servers =
-    List.list List.config <|
-        List.map serverListItem (toMarkedList servers)
+    let
+        ( x, xs ) =
+            toMarkedList servers
+    in
+    List.list List.config
+        (serverListItem x)
+        (List.map serverListItem xs)
 
 
-toMarkedList : Zipper a -> List ( Bool, a )
+toMarkedList : Zipper a -> ( ( Bool, a ), List ( Bool, a ) )
 toMarkedList zipper =
-    List.map (Tuple.pair False) (Zipper.before zipper)
-        ++ [ ( True, Zipper.current zipper ) ]
-        ++ List.map (Tuple.pair False) (Zipper.after zipper)
+    case Zipper.before zipper of
+        x :: xs ->
+            ( ( False, x )
+            , List.map (Tuple.pair False) xs
+                ++ [ ( True, Zipper.current zipper ) ]
+                ++ List.map (Tuple.pair False) (Zipper.after zipper)
+            )
+
+        _ ->
+            ( ( True, Zipper.current zipper )
+            , List.map (Tuple.pair False) (Zipper.after zipper)
+            )
 
 
 serverListItem : ( Bool, Server ) -> ListItem Msg

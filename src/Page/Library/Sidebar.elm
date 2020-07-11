@@ -8,6 +8,7 @@ import Component.Sidebar.VersionPanel as VersionPanel
 import Fhir.Library as Library exposing (Library)
 import Html exposing (Html)
 import Session exposing (Server)
+import Url.Builder as UrlBuilder
 
 
 
@@ -23,10 +24,16 @@ type alias Model =
     }
 
 
-init : Library -> Model
-init library =
+init : String -> Library -> Model
+init base library =
+    let
+        url =
+            Maybe.map
+                (\id -> UrlBuilder.crossOrigin base [ "Library", id ] [])
+                library.id
+    in
     { library = library
-    , sharePanel = SharePanel.init
+    , sharePanel = SharePanel.init url
     , urlPanel = UrlPanel.init library.url
     , versionPanel = VersionPanel.init library.version
     , subjectPanel = SubjectPanel.init (Library.getSubjectCode library)

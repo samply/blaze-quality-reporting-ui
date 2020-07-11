@@ -146,12 +146,7 @@ view model =
         case model.libraries of
             Loaded libraries ->
                 div [ class "main-content library-list-page" ]
-                    [ if List.isEmpty libraries then
-                        emptyListPlaceholder
-
-                      else
-                        libraryList libraries
-                    ]
+                    [ libraryList libraries ]
 
             Loading ->
                 text ""
@@ -165,20 +160,22 @@ view model =
     }
 
 
-emptyListPlaceholder =
-    div [ class "library-list-page__empty-placeholder" ]
-        [ Button.text
-            (Button.config |> Button.setOnClick ClickedCreateLibrary)
-            "create the first library"
-        ]
-
-
 libraryList libraries =
-    div [ class "library-list-page__list" ]
-        [ createButton
-        , List.list (List.config |> List.setTwoLine True) <|
-            List.map libraryListItem libraries
-        ]
+    case libraries of
+        library :: moreLibraries ->
+            div [ class "library-list-page__list" ]
+                [ createButton
+                , List.list (List.config |> List.setTwoLine True)
+                    (libraryListItem library)
+                    (List.map libraryListItem moreLibraries)
+                ]
+
+        _ ->
+            div [ class "library-list-page__empty-placeholder" ]
+                [ Button.text
+                    (Button.config |> Button.setOnClick ClickedCreateLibrary)
+                    "create the first library"
+                ]
 
 
 libraryListItem library =

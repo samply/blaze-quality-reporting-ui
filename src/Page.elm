@@ -9,6 +9,7 @@ import Material.Icon as Icon
 import Material.List as List
 import Material.List.Divider as ListDivider
 import Material.List.Item as ListItem
+import Material.Snackbar as Snackbar
 import Material.TopAppBar as TopAppBar
 import Material.Typography as Typography
 import Session exposing (Session)
@@ -23,8 +24,10 @@ type NavItem
 
 type alias Config msg =
     { onDrawerClose : msg
+    , onSnackbarClose : Snackbar.MessageId -> msg
     , onNavIconClick : msg
     , onNavItemClick : NavItem -> msg
+    , snackbarQueue : Snackbar.Queue msg
     }
 
 
@@ -50,6 +53,9 @@ view toPageMsg config session { title, content } =
             [ appBar session title
             , drawer config
             , Html.map toPageMsg content
+            , Snackbar.snackbar
+                (Snackbar.config { onClosed = config.onSnackbarClose })
+                config.snackbarQueue
             ]
         ]
     }
@@ -65,14 +71,15 @@ drawer config =
             ]
         , Drawer.content [ class "drawer__content" ]
             [ List.list List.config
-                [ ListItem.listItem
+                (ListItem.listItem
                     (ListItem.config
                         |> ListItem.setOnClick (config.onNavItemClick Libraries)
                     )
                     [ ListItem.graphic [] [ Fa.icon "book" ]
                     , text "Libraries"
                     ]
-                , ListItem.listItem
+                )
+                [ ListItem.listItem
                     (ListItem.config
                         |> ListItem.setOnClick (config.onNavItemClick Measures)
                     )
