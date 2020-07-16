@@ -1,4 +1,12 @@
-module Page.Library exposing (Model, Msg, init, toSession, update, view)
+module Page.Library exposing
+    ( Model
+    , Msg
+    , init
+    , toSession
+    , update
+    , updateSession
+    , view
+    )
 
 import Component.Error as Error
 import Component.Header as Header
@@ -11,7 +19,6 @@ import Html.Attributes exposing (class)
 import Http
 import List.Zipper as Zipper
 import Loading exposing (Status(..))
-import Material.LayoutGrid as LayoutGrid
 import Maybe.Extra as MaybeExtra
 import Page.Library.CqlPanel as CqlPanel
 import Page.Library.Sidebar as Sidebar
@@ -51,6 +58,11 @@ init session id =
 toSession : Model -> Session
 toSession model =
     model.session
+
+
+updateSession : (Session -> Session) -> Model -> Model
+updateSession f model =
+    { model | session = f model.session }
 
 
 
@@ -253,43 +265,42 @@ deleteLibrary base libraryId =
 
 view : Model -> { title : List String, content : Html Msg }
 view model =
-    case model.data of
-        Loaded data ->
-            { title = [ "Library" ]
-            , content =
-                div [ class "main-content library-page" ]
-                    [ viewLibrary data
-                    , viewSidebar model.session data.sidebar
-                    ]
-            }
+    { title = [ "Library" ]
+    , content =
+        div [ class "mt-16 ml-48 mr-64 p-6 flex-grow bg-gray-100" ] <|
+            viewData model.session model.data
+    }
 
+
+viewData : Session -> Status Data -> List (Html Msg)
+viewData session data =
+    case data of
         Loading ->
-            { title = [ "Library" ]
-            , content =
-                div [ class "main-content library-page" ] []
-            }
+            []
 
         LoadingSlowly ->
-            { title = [ "Library" ]
-            , content =
-                div [ class "main-content library-page" ] []
-            }
+            []
+
+        Loaded loadedData ->
+            [ viewLibrary loadedData
+            , viewSidebar session loadedData.sidebar
+            ]
+
+        Reloading _ ->
+            []
+
+        ReloadingSlowly _ ->
+            []
 
         Failed error ->
-            { title = [ "Library" ]
-            , content =
-                div [ class "main-content library-page library-page--error" ]
-                    [ viewError error ]
-            }
+            [ viewError error ]
 
 
 viewLibrary : Data -> Html Msg
 viewLibrary { library, header, cqlPanel } =
-    LayoutGrid.layoutGrid [ class "library" ]
-        [ LayoutGrid.inner []
-            [ viewHeader header
-            , viewCqlPanel cqlPanel
-            ]
+    Html.div []
+        [ viewHeader header
+        , viewCqlPanel cqlPanel
         ]
 
 

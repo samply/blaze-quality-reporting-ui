@@ -15,6 +15,7 @@ module Fhir.PrimitiveTypes exposing
 import Base64
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
+import Time
 
 
 type alias Uri =

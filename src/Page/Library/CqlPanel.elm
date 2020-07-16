@@ -1,12 +1,10 @@
 module Page.Library.CqlPanel exposing (Model, Msg, init, update, view)
 
+import Component.Button as Button
+import Component.TextArea as TextArea
 import Fhir.Attachment exposing (Attachment)
 import Html exposing (Html, div, h2, pre, text)
 import Html.Attributes exposing (class, classList)
-import Material.Button as Button
-import Material.IconButton as IconButton
-import Material.LayoutGrid as LayoutGrid exposing (span12)
-import Material.TextArea as TextArea
 import Maybe.Extra as MaybeExtra
 
 
@@ -76,48 +74,43 @@ type alias Config msg =
 
 view : Config msg -> Model -> Html msg
 view { onMsg, onSave } { attachment, edit } =
-    LayoutGrid.cell
-        [ class "cql-panel"
-        , span12
-        , classList [ ( "cql-panel--edit", edit ) ]
-        ]
-        [ div [ class "cql-panel__title" ]
-            [ h2 [ class "mdc-typography--headline5" ]
+    Html.div [ class "" ]
+        [ Html.div [ class "flex justify-between mb-4" ]
+            [ Html.h2 [ class "text-lg" ]
                 [ text "CQL" ]
             , editButton onMsg
             ]
-        , pre [ class "cql-panel__data" ]
-            [ if edit then
-                TextArea.filled
+        , if edit then
+            div []
+                [ TextArea.outlined
                     (TextArea.config
                         |> TextArea.setValue (attachment |> Maybe.andThen .data)
-                        |> TextArea.setFullwidth True
                         |> TextArea.setRows (Just 20)
                         |> TextArea.setOnInput (EnteredData >> onMsg)
                     )
+                , div [ class "text-right space-x-2" ]
+                    [ Button.secondary
+                        (Button.config
+                            |> Button.setOnClick (onMsg ClickedCancel)
+                        )
+                        "Cancel"
+                    , Button.primary
+                        (Button.config
+                            |> Button.setOnClick (onSave attachment)
+                        )
+                        "Save"
+                    ]
+                ]
 
-              else
-                attachment |> Maybe.andThen .data |> Maybe.withDefault "" |> text
-            ]
-        , div [ class "cql-panel__action-buttons" ]
-            [ Button.unelevated
-                (Button.config
-                    |> Button.setOnClick (onSave attachment)
-                )
-                "Save"
-            , Button.outlined
-                (Button.config
-                    |> Button.setOnClick (onMsg ClickedCancel)
-                )
-                "Cancel"
-            ]
+          else
+            pre [ class "text-sm" ]
+                [ attachment |> Maybe.andThen .data |> Maybe.withDefault "" |> text ]
         ]
 
 
 editButton onMsg =
-    IconButton.iconButton
-        (IconButton.config
-            |> IconButton.setOnClick (onMsg ClickedEdit)
-            |> IconButton.setAttributes [ class "cql-panel__edit-button" ]
+    Button.secondary
+        (Button.config
+            |> Button.setOnClick (onMsg ClickedEdit)
         )
-        "edit"
+        "Edit"

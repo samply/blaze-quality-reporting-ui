@@ -1,13 +1,11 @@
 module Component.Header exposing (Model, Msg, init, update, view)
 
+import Component.Button as Button
+import Component.TextArea as TextArea
+import Component.TextField as TextField
 import Events
 import Html exposing (..)
-import Html.Attributes exposing (class, classList)
-import Material.Button as Button
-import Material.IconButton as IconButton
-import Material.LayoutGrid as LayoutGrid exposing (span12)
-import Material.TextArea as TextArea
-import Material.TextField as TextField
+import Html.Attributes exposing (class)
 
 
 
@@ -85,13 +83,8 @@ type alias Config msg =
 
 view : Config msg -> Model -> Html msg
 view { onSave, onDelete, onMsg } { title, enteredTitle, description, enteredDescription, edit } =
-    LayoutGrid.cell
-        [ class "measure-header"
-        , span12
-        , classList [ ( "measure-header--edit", edit ) ]
-        ]
-    <|
-        [ div [ class "measure-header__title" ]
+    div [ class "mb-4" ]
+        ([ div [ class "flex justify-between mb-4" ]
             (if edit then
                 [ TextField.outlined
                     (TextField.config
@@ -106,27 +99,29 @@ view { onSave, onDelete, onMsg } { title, enteredTitle, description, enteredDesc
                 ]
 
              else
-                [ h2 [ class "mdc-typography--headline5" ]
+                [ h2 [ class "text-xl leading-loose" ]
                     [ text (Maybe.withDefault "<not specified>" title) ]
-                , IconButton.iconButton
-                    (IconButton.config
-                        |> IconButton.setOnClick (onMsg ClickedEdit)
+                , Button.secondary
+                    (Button.config
+                        |> Button.setOnClick (onMsg ClickedEdit)
+                        |> Button.setAttributes [ class "self-start" ]
                     )
-                    "edit"
+                    "Edit"
                 ]
             )
-        ]
+         ]
             ++ (if edit then
-                    [ div [ class "measure-header__description" ]
+                    [ div [ class "" ]
                         [ TextArea.outlined
                             (TextArea.config
-                                |> TextArea.setFullwidth True
+                                |> TextArea.setValue enteredDescription
+                                |> TextArea.setRows (Just 6)
                                 |> TextArea.setOnInput (EnteredDescription >> onMsg)
                             )
                         ]
-                    , div [ class "measure-header__action-buttons" ]
+                    , div [ class "flex justify-between" ]
                         [ saveButton (onSave enteredTitle enteredDescription)
-                        , div [ class "measure-header__action-buttons-right" ]
+                        , div [ class "space-x-2" ]
                             [ deleteButton onDelete
                             , cancelButton (onMsg ClickedCancel)
                             ]
@@ -136,17 +131,18 @@ view { onSave, onDelete, onMsg } { title, enteredTitle, description, enteredDesc
                 else
                     case description of
                         Just s ->
-                            [ div [ class "measure-header__description" ]
+                            [ div [ class "" ]
                                 [ text s ]
                             ]
 
                         Nothing ->
                             []
                )
+        )
 
 
 saveButton onClick =
-    Button.unelevated
+    Button.primary
         (Button.config
             |> Button.setOnClick onClick
         )
@@ -154,7 +150,7 @@ saveButton onClick =
 
 
 deleteButton onClick =
-    Button.unelevated
+    Button.secondary
         (Button.config
             |> Button.setOnClick onClick
             |> Button.setAttributes
@@ -164,7 +160,7 @@ deleteButton onClick =
 
 
 cancelButton onClick =
-    Button.outlined
+    Button.secondary
         (Button.config
             |> Button.setOnClick onClick
         )

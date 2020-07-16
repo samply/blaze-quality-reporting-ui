@@ -10,13 +10,15 @@ the onSave action can be supplied to the ['view'](#view) function.
 
 -}
 
+import Browser.Dom as Dom
+import Component.Button as Button
 import Component.Sidebar.Entry as SidebarEntry exposing (SidebarEntry)
+import Component.TextField as TextField
 import Events
 import Fhir.PrimitiveTypes exposing (Uri)
 import Html exposing (text)
 import Html.Attributes exposing (class)
-import Material.Button as Button
-import Material.TextField as TextField
+import Task
 
 
 
@@ -45,6 +47,7 @@ init url =
 type Msg
     = ClickedEdit
     | ClickedCancel
+    | TextFieldFocused (Result Dom.Error ())
     | EnteredUrl String
 
 
@@ -52,7 +55,12 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         ClickedEdit ->
-            ( { model | edit = True }, Cmd.none )
+            ( { model | edit = True }
+            , Task.attempt TextFieldFocused (Dom.focus "url")
+            )
+
+        TextFieldFocused _ ->
+            ( model, Cmd.none )
 
         ClickedCancel ->
             ( { model | enteredUrl = model.originalUrl, edit = False }
@@ -76,16 +84,17 @@ type alias Config msg =
 view : Config msg -> Model -> SidebarEntry msg
 view { onMsg, onSave } { originalUrl, enteredUrl, edit } =
     SidebarEntry.view
-        (SidebarEntry.config |> SidebarEntry.setAttributes [ class "url-panel" ])
+        SidebarEntry.config
         [ SidebarEntry.title []
             [ text "URL"
             , SidebarEntry.editButton
                 (Button.config |> Button.setOnClick (onMsg ClickedEdit))
             ]
-        , SidebarEntry.content [] <|
+        , SidebarEntry.content [ class "truncate" ] <|
             if edit then
                 [ TextField.outlined
                     (TextField.config
+                        |> TextField.setId (Just "url")
                         |> TextField.setValue enteredUrl
                         |> TextField.setOnInput (EnteredUrl >> onMsg)
                         |> TextField.setAttributes
@@ -110,18 +119,16 @@ view { onMsg, onSave } { originalUrl, enteredUrl, edit } =
 
 
 saveButton onClick =
-    Button.unelevated
+    Button.primary
         (Button.config
-            |> Button.setDense True
             |> Button.setOnClick onClick
         )
-        "save"
+        "Save"
 
 
 cancelButton onClick =
-    Button.outlined
+    Button.secondary
         (Button.config
-            |> Button.setDense True
             |> Button.setOnClick onClick
         )
-        "cancel"
+        "Cancel"

@@ -1,5 +1,9 @@
 module Page.Measure.ReportPanel exposing (Model, Msg, init, update, view)
 
+import Component.Button as Button
+import Component.Dialog as Dialog
+import Component.List as List
+import Component.List.Item as ListItem exposing (ListItem)
 import Fhir.Bundle exposing (Bundle)
 import Fhir.Http as FhirHttp exposing (Error(..))
 import Fhir.Measure exposing (Measure)
@@ -9,15 +13,7 @@ import Fhir.PrimitiveTypes exposing (Id)
 import Html exposing (Html, div, h3, h4, h5, li, p, text, ul)
 import Html.Attributes exposing (class)
 import Json.Decode exposing (decodeValue)
-import Loading
-import Material.Button as Button
-import Material.Dialog as Dialog
-import Material.Icon as Icon
-import Material.LayoutGrid as LayoutGrid exposing (span12)
-import Material.List as List
-import Material.List.Item as ListItem
-import MaterialUtil
-import Maybe.Extra as MaybeExtra
+import Loading exposing (Status(..))
 import Url.Builder as UrlBuilder
 
 
@@ -104,16 +100,22 @@ update msg model =
 
 addReport report model =
     case model.reports of
-        Loading.Loaded reports ->
+        Loading ->
+            model
+
+        LoadingSlowly ->
+            model
+
+        Loaded reports ->
             { model | reports = Loading.Loaded (report :: reports) }
 
-        Loading.Loading ->
+        Reloading _ ->
             model
 
-        Loading.LoadingSlowly ->
+        ReloadingSlowly _ ->
             model
 
-        Loading.Failed _ ->
+        Failed _ ->
             model
 
 
@@ -133,7 +135,10 @@ loadReports base url version =
 decodeReports : Bundle -> List MeasureReport
 decodeReports { entry } =
     List.filterMap
-        (.resource >> decodeValue MeasureReport.decoder >> Result.toMaybe)
+        (.resource
+            >> Maybe.map (decodeValue MeasureReport.decoder)
+            >> Maybe.andThen Result.toMaybe
+        )
         entry
 
 
@@ -149,34 +154,65 @@ type alias Config msg =
 
 
 view : Config msg -> Model -> Html msg
-view config model =
-    LayoutGrid.cell [ span12, class "measure-report-panel" ]
-        [ viewErrorDialog model.error |> Html.map config.onMsg
-        , h3
-            [ class "measure-report-panel__title"
-            , class "mdc-typography--headline5"
+view { onMsg, onLibraryAssoc, onReportClick } model =
+    div [ class "mb-4" ]
+        [ viewErrorDialog model.error |> Html.map onMsg
+        , div [ class "flex justify-between mb-2" ]
+            [ h3 [ class "text-lg mb-2" ] [ text "Reports" ]
+            , generateButton onMsg "Generate New Report"
             ]
-            [ text "Reports" ]
         , case ( model.measure.url, List.head model.measure.library ) of
             ( Just _, Just _ ) ->
                 case model.reports of
-                    Loading.Loaded reports ->
-                        viewReportList config.onMsg config.onReportClick reports
-
-                    Loading.Loading ->
+                    Loading ->
                         text ""
 
-                    Loading.LoadingSlowly ->
+                    LoadingSlowly ->
                         text ""
 
-                    Loading.Failed _ ->
+                    Loaded reports ->
+                        viewReportList onReportClick reports
+
+                    Reloading _ ->
+                        text ""
+
+                    ReloadingSlowly _ ->
+                        text ""
+
+                    Failed _ ->
                         text "error"
 
             ( Nothing, _ ) ->
                 missingUrlMessage
 
             ( _, Nothing ) ->
-                missingLibraryMessage config.onLibraryAssoc
+                missingLibraryMessage onLibraryAssoc
+        ]
+
+
+generateButton onMsg label =
+    Button.secondary
+        (Button.config |> Button.setOnClick (onMsg ClickedGenerate))
+        label
+
+
+viewReportList onReportClick reports =
+    if List.isEmpty reports then
+        div [] [ text "No reports available." ]
+
+    else
+        List.list List.config
+            (List.map (viewReport onReportClick) reports)
+
+
+viewReport : (Id -> msg) -> MeasureReport -> ListItem msg
+viewReport onReportClick ({ status, date } as report) =
+    ListItem.listItem
+        (ListItem.config
+            |> ListItem.setOnClick (onReportClick report.id)
+        )
+        report.id
+        [ text (Maybe.withDefault "<unknown-date>" date)
         ]
 
 
@@ -196,56 +232,10 @@ missingLibraryMessage onLibraryAssoc =
         ]
 
 
-viewReportList onMsg onReportClick reports =
-    div []
-        (case reports of
-            report :: moreReports ->
-                [ List.list List.config
-                    (viewReport onReportClick report)
-                    (List.map (viewReport onReportClick) moreReports)
-                , generateButton onMsg "Generate New Report"
-                ]
-
-            _ ->
-                [ generateButton onMsg "Generate First Report" ]
-        )
-
-
-generateButton onMsg label =
-    Button.outlined
-        (Button.config |> Button.setOnClick (onMsg ClickedGenerate))
-        label
-
-
-viewReport onReportClick ({ status, date } as report) =
-    ListItem.listItem
-        (ListItem.config
-            |> MaterialUtil.liftMaybe ListItem.setOnClick (Maybe.map onReportClick report.id)
-            |> ListItem.setDisabled (MaybeExtra.isNothing report.id)
-        )
-        [ ListItem.graphic [] [ statusIcon status ]
-        , text (Maybe.withDefault "<unknown-date>" date)
-        ]
-
-
-statusIcon status =
-    Icon.icon []
-        (case status of
-            Complete ->
-                "done"
-
-            Pending ->
-                "av_timer"
-
-            Error ->
-                "error_outline"
-        )
-
-
 viewErrorDialog error =
     Dialog.dialog
         (Dialog.config
-            |> Dialog.setOpen (MaybeExtra.isJust error)
+            |> Dialog.setOpen (Nothing /= error)
             |> Dialog.setOnClose ClickedErrorDialogClose
         )
         { title = Just "Error"
@@ -270,10 +260,10 @@ errorDialogContent error =
             List.map
                 (\issue ->
                     div []
-                        [ h4 [ class "mdc-typography--headline6" ]
+                        [ h4 [ class "text-lg" ]
                             [ text (issueTitle issue.code) ]
                         , p [] [ text (Maybe.withDefault "" issue.diagnostics) ]
-                        , h5 [ class "mdc-typography--subtitle1" ]
+                        , h5 [ class "text-md" ]
                             [ text "Location:" ]
                         , ul [] <|
                             List.map
@@ -303,6 +293,6 @@ issueTitle issueType =
 
 
 errorDialogOkButton =
-    Button.text
+    Button.primary
         (Button.config |> Button.setOnClick ClickedErrorDialogClose)
         "Ok"

@@ -8,11 +8,11 @@ module Component.Sidebar.SharePanel.CopyToServerDialog exposing
     , view
     )
 
+import Component.Dialog as Dialog
+import Component.List as List
+import Component.List.Item as ListItem
 import Html exposing (Html, text)
 import Html.Attributes exposing (class)
-import Material.Dialog as Dialog
-import Material.List as List
-import Material.List.Item as ListItem
 import Session exposing (Server)
 
 
@@ -45,9 +45,7 @@ doOpen model =
             ( model, Cmd.none )
 
         Closed ->
-            ( Open
-            , Cmd.none
-            )
+            ( Open, Cmd.none )
 
 
 doClose : Model -> Model
@@ -104,19 +102,18 @@ view { servers, onMsg, onSelect } model =
 
 
 serverList onSelect servers =
-    case servers of
-        server :: moreServers ->
-            List.list (List.config |> List.setTwoLine True)
-                (serverListItem onSelect server)
-                (List.map (serverListItem onSelect) moreServers)
+    if List.isEmpty servers then
+        text "no servers available"
 
-        _ ->
-            text "no servers available"
+    else
+        List.list List.config <|
+            List.map (serverListItem onSelect) servers
 
 
 serverListItem onSelect server =
     ListItem.listItem
         (ListItem.config |> ListItem.setOnClick (onSelect server))
+        server.url
         [ ListItem.text []
             { primary = [ text server.name ]
             , secondary = [ text server.url ]

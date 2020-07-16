@@ -55,12 +55,12 @@ var common = {
                 test: /\.scss$/,
                 exclude: [/elm-stuff/, /node_modules/],
                 // see https://github.com/webpack-contrib/css-loader#url
-                loaders: ["style-loader", "css-loader?url=false", "sass-loader"]
+                loaders: ["style-loader", "css-loader?url=false", "postcss-loader", "sass-loader"]
             },
             {
                 test: /\.css$/,
                 exclude: [/elm-stuff/, /node_modules/],
-                loaders: ["style-loader", "css-loader?url=false"]
+                loaders: ["style-loader", "css-loader?url=false", "postcss-loader"]
             },
             {
                 test: /\.woff(2)?(\?v=[0-9]\.[0-9]\.[0-9])?$/,
@@ -115,6 +115,7 @@ if (MODE === "development") {
         },
         devServer: {
             inline: true,
+            host: '0.0.0.0',
             stats: "errors-only",
             contentBase: path.join(__dirname, "src/assets"),
             historyApiFallback: true,
@@ -185,7 +186,8 @@ if (MODE === "production") {
                     exclude: [/elm-stuff/, /node_modules/],
                     loaders: [
                         MiniCssExtractPlugin.loader,
-                        "css-loader?url=false"
+                        "css-loader?url=false",
+                        "postcss-loader"
                     ]
                 },
                 {
@@ -194,6 +196,7 @@ if (MODE === "production") {
                     loaders: [
                         MiniCssExtractPlugin.loader,
                         "css-loader?url=false",
+                        "postcss-loader",
                         "sass-loader"
                     ]
                 }

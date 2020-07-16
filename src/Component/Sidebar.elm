@@ -23,7 +23,13 @@ setAttributes additionalAttributes (Config config_) =
 
 view : Config msg -> List (SidebarEntry msg) -> Html msg
 view (Config { additionalAttributes }) entries =
-    div (class "sidebar" :: additionalAttributes)
+    div
+        ([ class "fixed bg-gray-200 p-2 w-64 box-border"
+         , class "top-0 mt-16 right-0 bottom-0"
+         , class "border-l border-gray-400"
+         ]
+            ++ additionalAttributes
+        )
         (List.map
             (\(SidebarEntry { node }) -> node)
             entries

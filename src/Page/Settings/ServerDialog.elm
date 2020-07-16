@@ -8,15 +8,15 @@ module Page.Settings.ServerDialog exposing
     , view
     )
 
+import Component.Button as Button
+import Component.Dialog as Dialog
+import Component.TextField as TextField
 import Events exposing (onEnter)
 import Html exposing (Html)
 import Html.Attributes exposing (class)
-import Material.Button as Button
-import Material.Dialog as Dialog
-import Material.TextField as TextField
-import MaterialUtil
 import Maybe.Extra as MaybeExtra
 import Session exposing (Server)
+import Util
 
 
 type Model
@@ -105,7 +105,6 @@ view { onMsg, onSave } model =
         (Dialog.config
             |> Dialog.setOpen (isOpen model)
             |> Dialog.setOnClose (onMsg ClickedClose)
-            |> Dialog.setAttributes [ class "settings-server-dialog" ]
         )
         { title = Just "Server"
         , content =
@@ -113,14 +112,14 @@ view { onMsg, onSave } model =
             , urlField onSave_ onMsg url
             ]
         , actions =
-            [ Button.text
+            [ Button.secondary
                 (Button.config
                     |> Button.setOnClick (onMsg ClickedClose)
                 )
                 "Cancel"
-            , Button.text
+            , Button.primary
                 (Button.config
-                    |> MaterialUtil.liftMaybe Button.setOnClick onSave_
+                    |> Util.liftMaybe Button.setOnClick onSave_
                     |> Button.setDisabled (isEmpty name || isEmpty url)
                 )
                 "Save"
@@ -145,40 +144,44 @@ isEmpty s =
 
 
 nameField onSave onMsg name =
-    TextField.filled
-        (TextField.config
-            |> TextField.setLabel (Just "Name")
-            |> TextField.setValue name
-            |> TextField.setOnInput (EnteredName >> onMsg)
-            |> TextField.setRequired True
-            |> TextField.setValid
-                (Maybe.map (String.isEmpty >> not) name
-                    |> Maybe.withDefault False
-                )
-            |> TextField.setAttributes
-                (onSave
-                    |> Maybe.map onEnter
-                    |> Maybe.map List.singleton
-                    |> Maybe.withDefault []
-                )
-        )
+    Html.div [ class "mb-2" ]
+        [ Html.div [ class "mb-1" ] [ Html.text "Name" ]
+        , TextField.outlined
+            (TextField.config
+                |> TextField.setValue name
+                |> TextField.setOnInput (EnteredName >> onMsg)
+                |> TextField.setRequired True
+                |> TextField.setValid
+                    (Maybe.map (String.isEmpty >> not) name
+                        |> Maybe.withDefault False
+                    )
+                |> TextField.setAttributes
+                    (onSave
+                        |> Maybe.map onEnter
+                        |> Maybe.map List.singleton
+                        |> Maybe.withDefault []
+                    )
+            )
+        ]
 
 
 urlField onSave onMsg url =
-    TextField.filled
-        (TextField.config
-            |> TextField.setLabel (Just "URL")
-            |> TextField.setValue url
-            |> TextField.setOnInput (EnteredUrl >> onMsg)
-            |> TextField.setRequired True
-            |> TextField.setValid
-                (Maybe.map (String.isEmpty >> not) url
-                    |> Maybe.withDefault False
-                )
-            |> TextField.setAttributes
-                (onSave
-                    |> Maybe.map onEnter
-                    |> Maybe.map List.singleton
-                    |> Maybe.withDefault []
-                )
-        )
+    Html.div []
+        [ Html.div [ class "mb-1" ] [ Html.text "URL" ]
+        , TextField.outlined
+            (TextField.config
+                |> TextField.setValue url
+                |> TextField.setOnInput (EnteredUrl >> onMsg)
+                |> TextField.setRequired True
+                |> TextField.setValid
+                    (Maybe.map (String.isEmpty >> not) url
+                        |> Maybe.withDefault False
+                    )
+                |> TextField.setAttributes
+                    (onSave
+                        |> Maybe.map onEnter
+                        |> Maybe.map List.singleton
+                        |> Maybe.withDefault []
+                    )
+            )
+        ]

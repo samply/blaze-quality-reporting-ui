@@ -10,12 +10,13 @@ the onSave action can be supplied to the ['view'](#view) function.
 
 -}
 
+import Browser.Dom as Dom
+import Component.Button as Button
 import Component.Sidebar.Entry as SidebarEntry exposing (SidebarEntry)
-import Events
+import Component.TextField as TextField
 import Html exposing (text)
 import Html.Attributes exposing (class)
-import Material.Button as Button
-import Material.TextField as TextField
+import Task
 
 
 
@@ -44,6 +45,7 @@ init version =
 type Msg
     = ClickedEdit
     | ClickedCancel
+    | TextFieldFocused (Result Dom.Error ())
     | EnteredVersion String
 
 
@@ -51,7 +53,12 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         ClickedEdit ->
-            ( { model | edit = True }, Cmd.none )
+            ( { model | edit = True }
+            , Task.attempt TextFieldFocused (Dom.focus "version")
+            )
+
+        TextFieldFocused _ ->
+            ( model, Cmd.none )
 
         ClickedCancel ->
             ( { model | enteredVersion = model.originalVersion, edit = False }
@@ -59,7 +66,16 @@ update msg model =
             )
 
         EnteredVersion s ->
-            ( { model | enteredVersion = Just s }, Cmd.none )
+            ( { model | enteredVersion = emptyToNothing s }, Cmd.none )
+
+
+emptyToNothing : String -> Maybe String
+emptyToNothing s =
+    if String.isEmpty s then
+        Nothing
+
+    else
+        Just s
 
 
 
@@ -75,7 +91,7 @@ type alias Config msg =
 view : Config msg -> Model -> SidebarEntry msg
 view { onMsg, onSave } { originalVersion, enteredVersion, edit } =
     SidebarEntry.view
-        (SidebarEntry.config |> SidebarEntry.setAttributes [ class "version-panel" ])
+        SidebarEntry.config
         [ SidebarEntry.title []
             [ text "Version"
             , SidebarEntry.editButton
@@ -85,13 +101,11 @@ view { onMsg, onSave } { originalVersion, enteredVersion, edit } =
             if edit then
                 [ TextField.outlined
                     (TextField.config
+                        |> TextField.setId (Just "version")
                         |> TextField.setValue enteredVersion
                         |> TextField.setOnInput (EnteredVersion >> onMsg)
-                        |> TextField.setAttributes
-                            [ Events.onEnterEsc
-                                (onSave enteredVersion)
-                                (onMsg ClickedCancel)
-                            ]
+                        |> TextField.setOnEnter (onSave enteredVersion)
+                        |> TextField.setOnEsc (onMsg ClickedCancel)
                     )
                 ]
 
@@ -109,18 +123,16 @@ view { onMsg, onSave } { originalVersion, enteredVersion, edit } =
 
 
 saveButton onClick =
-    Button.unelevated
+    Button.primary
         (Button.config
-            |> Button.setDense True
             |> Button.setOnClick onClick
         )
-        "save"
+        "Save"
 
 
 cancelButton onClick =
-    Button.outlined
+    Button.secondary
         (Button.config
-            |> Button.setDense True
             |> Button.setOnClick onClick
         )
-        "cancel"
+        "Cancel"

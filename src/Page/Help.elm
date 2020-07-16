@@ -4,6 +4,7 @@ module Page.Help exposing
     , init
     , toSession
     , update
+    , updateSession
     , view
     )
 
@@ -32,6 +33,11 @@ toSession model =
     model.session
 
 
+updateSession : (Session -> Session) -> Model -> Model
+updateSession f model =
+    { model | session = f model.session }
+
+
 
 -- UPDATE
 
@@ -54,7 +60,7 @@ view _ =
     { title = [ "Help" ]
     , content =
         div [ class "main-content help-page" ]
-            [ h2 [ class "mdc-typography--headline5" ] [ text "References" ]
+            [ h2 [ class "text-xl leading-loose" ] [ text "References" ]
             , ul []
                 [ li []
                     [ a [ href "http://hl7.org/fhir/us/cqfmeasures/STU1" ]
