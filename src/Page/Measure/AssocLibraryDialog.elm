@@ -8,17 +8,17 @@ module Page.Measure.AssocLibraryDialog exposing
     , view
     )
 
+import Component.Dialog as Dialog
+import Component.Icon as Icon
+import Component.List as List
+import Component.List.Item as ListItem
+import Component.TextField as TextField
 import Fhir.Bundle exposing (Bundle)
 import Fhir.Http as FhirHttp
 import Fhir.Library as Library exposing (Library)
 import Html exposing (Html, text)
 import Html.Attributes exposing (class)
 import Json.Decode exposing (decodeValue)
-import Material.Dialog as Dialog
-import Material.Icon as Icon
-import Material.List as List
-import Material.List.Item as ListItem
-import Material.TextField as TextField
 import Maybe.Extra as MaybeExtra
 import Process
 import Task
@@ -123,7 +123,10 @@ searchLibraries base query =
 decodeLibraries : Bundle -> List Library
 decodeLibraries { entry } =
     List.filterMap
-        (.resource >> decodeValue Library.decoder >> Result.toMaybe)
+        (.resource
+            >> Maybe.map (decodeValue Library.decoder)
+            >> Maybe.andThen Result.toMaybe
+        )
         entry
 
 
@@ -156,12 +159,11 @@ view { onMsg, onSelect } model =
         )
         { title = Just "Load Library"
         , content =
-            [ TextField.filled
+            [ TextField.outlined
                 (TextField.config
                     |> TextField.setPlaceholder (Just "Search")
                     |> TextField.setValue search
                     |> TextField.setOnInput (EnteredSearch >> onMsg)
-                    |> TextField.setFullwidth True
                 )
             , libraryList onSelect libraries
             ]
@@ -170,26 +172,25 @@ view { onMsg, onSelect } model =
 
 
 libraryList onSelect libraries =
-    case libraries of
-        library :: moreLibraries ->
-            List.list (List.config |> List.setTwoLine True)
-                (libraryListItem onSelect library)
-                (List.map (libraryListItem onSelect) moreLibraries)
+    if List.isEmpty libraries then
+        text "no libraries available"
 
-        _ ->
-            text "no libraries available"
+    else
+        List.list List.config <|
+            List.map (libraryListItem onSelect) libraries
 
 
 libraryListItem onSelect library =
     let
         disabled =
-            MaybeExtra.isNothing library.url
+            library.url == Nothing
     in
     ListItem.listItem
         (ListItem.config
             |> ListItem.setOnClick (onSelect library)
             |> ListItem.setDisabled disabled
         )
+        library.id
         [ ListItem.text []
             { primary = [ titleText library ]
             , secondary = [ urlText library ]

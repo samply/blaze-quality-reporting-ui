@@ -1,59 +1,34 @@
-module Fhir.Bundle exposing (Bundle, Entry, decoder, encode)
+module Fhir.Bundle exposing
+    ( Bundle
+    , decoder
+    , encode
+    , linkUrl
+    )
 
-import Json.Decode exposing (Decoder, int, list, maybe, string, succeed, value)
+import Fhir.Bundle.Entry as Entry exposing (BundleEntry)
+import Fhir.Encode exposing (object, optionalListPair, pair)
+import Fhir.PrimitiveTypes exposing (Uri)
+import Json.Decode exposing (Decoder, int, list, maybe, string, succeed)
 import Json.Decode.Pipeline exposing (optional, required)
 import Json.Encode as Encode exposing (Value)
+import List.Extra
 
 
 type alias Bundle =
     { type_ : String
     , total : Maybe Int
-    , entry : List Entry
-    }
-
-
-type alias Entry =
-    { resource : Value
-    , request : Maybe Request
-    }
-
-
-type alias Request =
-    { method : String
-    , url : String
+    , link : List Link
+    , entry : List BundleEntry
     }
 
 
 encode : Bundle -> Value
-encode { type_, entry } =
-    Encode.object
-        [ ( "resourceType", Encode.string "Bundle" )
-        , ( "type", Encode.string type_ )
-        , ( "entry"
-          , Encode.list encodeEntry entry
-          )
-        ]
-
-
-encodeEntry : Entry -> Value
-encodeEntry { resource, request } =
-    Encode.object
-        ([ ( "resource", resource ) ]
-            ++ (case request of
-                    Just aRequest ->
-                        [ ( "request", encodeRequest aRequest ) ]
-
-                    Nothing ->
-                        []
-               )
-        )
-
-
-encodeRequest : Request -> Value
-encodeRequest { method, url } =
-    Encode.object
-        [ ( "method", Encode.string method )
-        , ( "url", Encode.string url )
+encode { type_, link, entry } =
+    object
+        [ pair "resourceType" Encode.string "Bundle"
+        , pair "type" Encode.string type_
+        , optionalListPair "Link" encodeLink link
+        , optionalListPair "entry" Entry.encode entry
         ]
 
 
@@ -62,18 +37,33 @@ decoder =
     succeed Bundle
         |> required "type" string
         |> optional "total" (maybe int) Nothing
-        |> optional "entry" (list entryDecoder) []
+        |> optional "link" (list linkDecoder) []
+        |> optional "entry" (list Entry.decoder) []
 
 
-entryDecoder : Decoder Entry
-entryDecoder =
-    succeed Entry
-        |> optional "resource" value Encode.null
-        |> optional "request" (maybe requestDecoder) Nothing
+linkUrl : String -> Bundle -> Maybe Uri
+linkUrl relation { link } =
+    link
+        |> List.Extra.find (.relation >> (==) relation)
+        |> Maybe.map .url
 
 
-requestDecoder : Decoder Request
-requestDecoder =
-    succeed Request
-        |> required "method" string
+type alias Link =
+    { relation : String
+    , url : Uri
+    }
+
+
+encodeLink : Link -> Value
+encodeLink { relation, url } =
+    object
+        [ pair "relation" Encode.string relation
+        , pair "url" Encode.string url
+        ]
+
+
+linkDecoder : Decoder Link
+linkDecoder =
+    succeed Link
+        |> required "relation" string
         |> required "url" string

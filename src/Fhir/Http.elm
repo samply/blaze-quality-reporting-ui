@@ -2,6 +2,7 @@ module Fhir.Http exposing
     ( Error(..)
     , create
     , delete
+    , loadBundle
     , postBundle
     , postOperationInstance
     , postOperationType
@@ -44,9 +45,14 @@ read :
     -> Decoder resource
     -> Cmd msg
 read toMsg base type_ id decoder =
-    Http.get
-        { url = UrlBuilder.crossOrigin base [ type_, id ] []
+    Http.request
+        { method = "GET"
+        , headers = [ Http.header "Accept" "application/fhir+json" ]
+        , url = UrlBuilder.crossOrigin base [ type_, id ] []
+        , body = Http.emptyBody
         , expect = expectJson toMsg decoder
+        , timeout = Nothing
+        , tracker = Nothing
         }
 
 
@@ -57,17 +63,38 @@ searchType :
     -> List QueryParameter
     -> Cmd msg
 searchType toMsg base type_ params =
-    Http.get
-        { url = UrlBuilder.crossOrigin base [ type_ ] params
+    Http.request
+        { method = "GET"
+        , headers = [ Http.header "Accept" "application/fhir+json" ]
+        , url = UrlBuilder.crossOrigin base [ type_ ] params
+        , body = Http.emptyBody
         , expect = expectJson toMsg Bundle.decoder
+        , timeout = Nothing
+        , tracker = Nothing
         }
 
 
-postBundle : (Result Error Bundle -> msg) -> String -> Value -> Cmd msg
+loadBundle :
+    (Result Error Bundle -> msg)
+    -> String
+    -> Cmd msg
+loadBundle toMsg url =
+    Http.request
+        { method = "GET"
+        , headers = [ Http.header "Accept" "application/fhir+json" ]
+        , url = url
+        , body = Http.emptyBody
+        , expect = expectJson toMsg Bundle.decoder
+        , timeout = Nothing
+        , tracker = Nothing
+        }
+
+
+postBundle : (Result Error Bundle -> msg) -> String -> Bundle -> Cmd msg
 postBundle toMsg base bundle =
     Http.post
         { url = base
-        , body = Http.jsonBody bundle
+        , body = Http.jsonBody (Bundle.encode bundle)
         , expect = expectJson toMsg Bundle.decoder
         }
 

@@ -4,19 +4,18 @@ module Page.Settings exposing
     , init
     , toSession
     , update
+    , updateSession
     , view
     )
 
+import Component.Button as Button
+import Component.List as List
+import Component.List.Item as ListItem exposing (ListItem)
+import Component.Radio as Radio
 import Html exposing (Html, div, h2, text)
 import Html.Attributes exposing (class, classList)
 import Json.Encode exposing (encode)
 import List.Zipper as Zipper exposing (Zipper)
-import Material.Button as Button
-import Material.Card as Card
-import Material.IconButton as IconButton
-import Material.List as List
-import Material.List.Item as ListItem exposing (ListItem)
-import Material.Radio as Radio
 import NaturalOrdering
 import Page.Settings.ServerDialog as ServerDialog
 import Ports
@@ -47,6 +46,11 @@ init session =
 toSession : Model -> Session
 toSession model =
     model.session
+
+
+updateSession : (Session -> Session) -> Model -> Model
+updateSession f model =
+    { model | session = f model.session }
 
 
 
@@ -208,7 +212,7 @@ view : Model -> { title : List String, content : Html Msg }
 view model =
     { title = [ "Settings" ]
     , content =
-        div [ class "main-content settings-page" ]
+        div [ class "mt-16 ml-48 p-6 flex-grow bg-gray-100" ]
             [ viewServerDialog model
             , serverListCard model.session.servers
             ]
@@ -226,61 +230,28 @@ viewServerDialog model =
 
 serverListCard : Zipper Server -> Html Msg
 serverListCard servers =
-    Card.card
-        (Card.config
-            |> Card.setOutlined True
-            |> Card.setAttributes [ class "settings-server-list-card" ]
-        )
-        { blocks =
-            [ Card.block <|
-                div [ class "settings-server-list-card__header" ]
-                    [ h2 [ class "mdc-typography--headline6" ]
-                        [ text "Servers" ]
-                    ]
-            , Card.block <|
-                div [ class "settings-server-list-card__body" ]
-                    [ serverList servers ]
-            ]
-        , actions =
-            Just <|
-                Card.actions
-                    { buttons =
-                        [ Card.button
-                            (Button.config
-                                |> Button.setOnClick ClickedAddServer
-                            )
-                            "add"
-                        ]
-                    , icons = []
-                    }
-        }
+    div [ class "" ]
+        [ h2 [ class "text-lg mb-2" ] [ text "Servers" ]
+        , serverList servers
+        , Button.primary
+            (Button.config
+                |> Button.setOnClick ClickedAddServer
+            )
+            "Add"
+        ]
 
 
 serverList : Zipper Server -> Html Msg
 serverList servers =
-    let
-        ( x, xs ) =
-            toMarkedList servers
-    in
-    List.list List.config
-        (serverListItem x)
-        (List.map serverListItem xs)
+    List.list (List.config |> List.setAttributes [ class "mb-4" ]) <|
+        List.map serverListItem (toMarkedList servers)
 
 
-toMarkedList : Zipper a -> ( ( Bool, a ), List ( Bool, a ) )
+toMarkedList : Zipper a -> List ( Bool, a )
 toMarkedList zipper =
-    case Zipper.before zipper of
-        x :: xs ->
-            ( ( False, x )
-            , List.map (Tuple.pair False) xs
-                ++ [ ( True, Zipper.current zipper ) ]
-                ++ List.map (Tuple.pair False) (Zipper.after zipper)
-            )
-
-        _ ->
-            ( ( True, Zipper.current zipper )
-            , List.map (Tuple.pair False) (Zipper.after zipper)
-            )
+    List.map (Tuple.pair False) (Zipper.before zipper)
+        ++ [ ( True, Zipper.current zipper ) ]
+        ++ List.map (Tuple.pair False) (Zipper.after zipper)
 
 
 serverListItem : ( Bool, Server ) -> ListItem Msg
@@ -290,6 +261,7 @@ serverListItem ( active, { name } as server ) =
             |> ListItem.setAttributes
                 [ classList [ ( "settings-server-list-item--active", active ) ] ]
         )
+        name
         [ ListItem.graphic []
             [ Radio.radio
                 (Radio.config
@@ -299,18 +271,18 @@ serverListItem ( active, { name } as server ) =
             ]
         , text name
         , ListItem.meta []
-            [ IconButton.iconButton
-                (IconButton.config
-                    |> IconButton.setOnClick (ClickedServerEdit server)
+            [ Button.icon
+                (Button.config
+                    |> Button.setOnClick (ClickedServerEdit server)
                 )
                 "edit"
             , if active then
                 text ""
 
               else
-                IconButton.iconButton
-                    (IconButton.config
-                        |> IconButton.setOnClick (ClickedServerDelete name)
+                Button.icon
+                    (Button.config
+                        |> Button.setOnClick (ClickedServerDelete name)
                     )
                     "delete"
             ]

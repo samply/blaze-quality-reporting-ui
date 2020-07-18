@@ -3,11 +3,14 @@ module Component.Sidebar.SubjectPanel exposing (Model, Msg, init, update, view)
 {-| This component is the subject input box in the sidebar.
 -}
 
+import Browser.Dom as Dom
+import Component.Button as Button
 import Component.Sidebar.Entry as SidebarEntry exposing (SidebarEntry)
-import Events
+import Component.TextField as TextField
 import Html exposing (text)
-import Material.Button as Button
-import Material.TextField as TextField
+import Html.Attributes exposing (class)
+import Task
+import Util
 
 
 
@@ -27,7 +30,7 @@ init subject =
     { originalSubject = subject
     , enteredSubject = Just subject
     , edit = False
-    , valid = True
+    , valid = not (String.isEmpty subject)
     }
 
 
@@ -38,6 +41,7 @@ init subject =
 type Msg
     = ClickedEdit
     | ClickedCancel
+    | TextFieldFocused (Result Dom.Error ())
     | EnteredSubject String
 
 
@@ -45,7 +49,9 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         ClickedEdit ->
-            ( { model | edit = True }, Cmd.none )
+            ( { model | edit = True }
+            , Task.attempt TextFieldFocused (Dom.focus "subject")
+            )
 
         ClickedCancel ->
             ( { model
@@ -54,6 +60,9 @@ update msg model =
               }
             , Cmd.none
             )
+
+        TextFieldFocused _ ->
+            ( model, Cmd.none )
 
         EnteredSubject subject ->
             ( { model
@@ -86,19 +95,13 @@ view { onMsg, onSave } { originalSubject, enteredSubject, edit, valid } =
             if edit then
                 [ TextField.outlined
                     (TextField.config
+                        |> TextField.setId (Just "subject")
                         |> TextField.setValue enteredSubject
                         |> TextField.setRequired True
                         |> TextField.setValid valid
                         |> TextField.setOnInput (EnteredSubject >> onMsg)
-                        |> TextField.setAttributes
-                            [ if valid then
-                                Events.onEnterEsc
-                                    (onSave enteredSubject)
-                                    (onMsg ClickedCancel)
-
-                              else
-                                Events.onEsc (onMsg ClickedCancel)
-                            ]
+                        |> Util.applyIf valid (TextField.setOnEnter (onSave enteredSubject))
+                        |> TextField.setOnEsc (onMsg ClickedCancel)
                     )
                 ]
 
@@ -116,9 +119,8 @@ view { onMsg, onSave } { originalSubject, enteredSubject, edit, valid } =
 
 
 saveButton disabled onClick =
-    Button.unelevated
+    Button.primary
         (Button.config
-            |> Button.setDense True
             |> Button.setDisabled disabled
             |> Button.setOnClick onClick
         )
@@ -126,9 +128,8 @@ saveButton disabled onClick =
 
 
 cancelButton onClick =
-    Button.outlined
+    Button.secondary
         (Button.config
-            |> Button.setDense True
             |> Button.setOnClick onClick
         )
         "cancel"

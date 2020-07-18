@@ -5,7 +5,6 @@ import Browser.Navigation as Nav
 import Json.Decode as Decode exposing (Decoder, decodeString, decodeValue, succeed)
 import Json.Decode.Pipeline exposing (optional)
 import Json.Encode exposing (Value)
-import Material.Snackbar as Snackbar
 import Page
 import Page.Blank as Blank
 import Page.Help as Help
@@ -16,9 +15,10 @@ import Page.Measure.List as MeasureList
 import Page.MeasureReport as MeasureReport
 import Page.NotFound as NotFound
 import Page.Settings as Settings
-import Ports
 import Route exposing (Route)
 import Session exposing (Session)
+import Task
+import Time
 import Url exposing (Url)
 
 
@@ -29,7 +29,6 @@ import Url exposing (Url)
 type alias Model =
     { drawerOpen : Bool
     , page : Page
-    , snackbarQueue : Snackbar.Queue Msg
     }
 
 
@@ -55,12 +54,14 @@ init flagsValue url navKey =
         flags =
             decodeValue (flagsDecoder navKey) flagsValue
                 |> Result.withDefault (defaultFlags navKey)
+
+        ( model, cmd ) =
+            changeRouteTo (Route.fromUrl url)
+                { drawerOpen = False
+                , page = Redirect flags.session
+                }
     in
-    changeRouteTo (Route.fromUrl url)
-        { drawerOpen = False
-        , page = Redirect flags.session
-        , snackbarQueue = Snackbar.initialQueue
-        }
+    ( model, Cmd.batch [ cmd, Task.perform GotTimeZone Time.here ] )
 
 
 flagsDecoder : Nav.Key -> Decoder Flags
@@ -90,8 +91,7 @@ type Msg
     | ClickedNavIcon
     | ClickedNavItem Page.NavItem
     | ClosedDrawer
-    | ClosedSnackbar Snackbar.MessageId
-    | GotClipboardSuccess Value
+    | GotTimeZone Time.Zone
     | GotLibraryListMsg LibraryList.Msg
     | GotLibraryMsg Library.Msg
     | GotMeasureListMsg MeasureList.Msg
@@ -145,17 +145,9 @@ update msg model =
         ( ClosedDrawer, _ ) ->
             ( { model | drawerOpen = False }, Cmd.none )
 
-        ( ClosedSnackbar messageId, _ ) ->
-            ( { model | snackbarQueue = Snackbar.close messageId model.snackbarQueue }
-            , Cmd.none
-            )
-
-        ( GotClipboardSuccess _, _ ) ->
-            let
-                message =
-                    Snackbar.message "Copied successful."
-            in
-            ( { model | snackbarQueue = Snackbar.addMessage message model.snackbarQueue }
+        ( GotTimeZone timeZone, _ ) ->
+            ( updateSession (\session -> { session | timeZone = timeZone })
+                model
             , Cmd.none
             )
 
@@ -221,6 +213,43 @@ toSession page =
 
         Help help ->
             Help.toSession help
+
+
+updateSession : (Session -> Session) -> Model -> Model
+updateSession f model =
+    case model.page of
+        Redirect session ->
+            { model | page = Redirect (f session) }
+
+        NotFound session ->
+            { model | page = NotFound (f session) }
+
+        LibraryList libraryList ->
+            { model
+                | page = LibraryList (LibraryList.updateSession f libraryList)
+            }
+
+        Library library ->
+            { model | page = Library (Library.updateSession f library) }
+
+        MeasureList measureList ->
+            { model
+                | page = MeasureList (MeasureList.updateSession f measureList)
+            }
+
+        Measure measure ->
+            { model | page = Measure (Measure.updateSession f measure) }
+
+        MeasureReport measure ->
+            { model
+                | page = MeasureReport (MeasureReport.updateSession f measure)
+            }
+
+        Settings settings ->
+            { model | page = Settings (Settings.updateSession f settings) }
+
+        Help help ->
+            { model | page = Help (Help.updateSession f help) }
 
 
 changeRouteTo : Maybe Route -> Model -> ( Model, Cmd Msg )
@@ -295,8 +324,18 @@ updateWith toModel toMsg model ( subModel, subCmd ) =
 
 
 subscriptions : Model -> Sub Msg
-subscriptions _ =
-    Ports.clipboardSuccess GotClipboardSuccess
+subscriptions { page } =
+    case page of
+        LibraryList libraryList ->
+            LibraryList.subscriptions libraryList
+                |> Sub.map GotLibraryListMsg
+
+        MeasureList measureList ->
+            MeasureList.subscriptions measureList
+                |> Sub.map GotMeasureListMsg
+
+        _ ->
+            Sub.none
 
 
 
@@ -308,10 +347,8 @@ view model =
     let
         pageViewConfig =
             { onDrawerClose = ClosedDrawer
-            , onSnackbarClose = ClosedSnackbar
             , onNavIconClick = ClickedNavIcon
             , onNavItemClick = ClickedNavItem
-            , snackbarQueue = model.snackbarQueue
             }
 
         viewPage toMsg config =

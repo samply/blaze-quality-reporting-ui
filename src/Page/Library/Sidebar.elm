@@ -17,26 +17,24 @@ import Url.Builder as UrlBuilder
 
 type alias Model =
     { library : Library
-    , sharePanel : SharePanel.Model
     , urlPanel : UrlPanel.Model
     , versionPanel : VersionPanel.Model
     , subjectPanel : SubjectPanel.Model
+    , sharePanel : SharePanel.Model
     }
 
 
 init : String -> Library -> Model
 init base library =
     let
-        url =
-            Maybe.map
-                (\id -> UrlBuilder.crossOrigin base [ "Library", id ] [])
-                library.id
+        apiUrl =
+            UrlBuilder.crossOrigin base [ "Library", library.id ] []
     in
     { library = library
-    , sharePanel = SharePanel.init url
     , urlPanel = UrlPanel.init library.url
     , versionPanel = VersionPanel.init library.version
     , subjectPanel = SubjectPanel.init (Library.getSubjectCode library)
+    , sharePanel = SharePanel.init apiUrl
     }
 
 
@@ -45,22 +43,15 @@ init base library =
 
 
 type Msg
-    = GotShareMsg SharePanel.Msg
-    | GotUrlMsg UrlPanel.Msg
+    = GotUrlMsg UrlPanel.Msg
     | GotVersionMsg VersionPanel.Msg
     | GotSubjectMsg SubjectPanel.Msg
+    | GotShareMsg SharePanel.Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        GotShareMsg msg_ ->
-            let
-                ( share, cmd ) =
-                    SharePanel.update msg_ model.sharePanel
-            in
-            ( { model | sharePanel = share }, Cmd.map GotShareMsg cmd )
-
         GotUrlMsg msg_ ->
             let
                 ( url, cmd ) =
@@ -82,6 +73,13 @@ update msg model =
             in
             ( { model | subjectPanel = subject }, Cmd.map GotSubjectMsg cmd )
 
+        GotShareMsg msg_ ->
+            let
+                ( share, cmd ) =
+                    SharePanel.update msg_ model.sharePanel
+            in
+            ( { model | sharePanel = share }, Cmd.map GotShareMsg cmd )
+
 
 
 -- VIEW
@@ -98,20 +96,11 @@ type alias Config msg =
 view : Config msg -> Model -> Html msg
 view config model =
     Sidebar.view Sidebar.config
-        [ viewSharePanel config model
-        , viewUrlPanel config model
+        [ viewUrlPanel config model
         , viewVersionPanel config model
         , viewSubjectPanel config model
+        , viewSharePanel config model
         ]
-
-
-viewSharePanel { servers, onMsg, onCopyToServer } { sharePanel } =
-    SharePanel.view
-        { servers = servers
-        , onMsg = GotShareMsg >> onMsg
-        , onCopyToServer = onCopyToServer
-        }
-        sharePanel
 
 
 viewUrlPanel { onMsg, onSave } { library, urlPanel } =
@@ -136,3 +125,12 @@ viewSubjectPanel { onMsg, onSave } { library, subjectPanel } =
         , onSave = \code -> onSave (Library.setSubjectCode code library)
         }
         subjectPanel
+
+
+viewSharePanel { servers, onMsg, onCopyToServer } { sharePanel } =
+    SharePanel.view
+        { servers = servers
+        , onMsg = GotShareMsg >> onMsg
+        , onCopyToServer = onCopyToServer
+        }
+        sharePanel

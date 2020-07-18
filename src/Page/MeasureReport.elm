@@ -1,5 +1,16 @@
-module Page.MeasureReport exposing (Model, Msg, init, toSession, update, view)
+module Page.MeasureReport exposing
+    ( Model
+    , Msg
+    , init
+    , toSession
+    , update
+    , updateSession
+    , view
+    )
 
+import Component.DataTable as DataTable
+import Component.List as List
+import Component.List.Item as ListItem exposing (ListItem)
 import Fhir.CodeableConcept exposing (CodeableConcept)
 import Fhir.Http as FhirHttp
 import Fhir.MeasureReport as MeasureReport exposing (MeasureReport)
@@ -7,9 +18,6 @@ import Fhir.PrimitiveTypes exposing (Id)
 import Html exposing (Html, div, h3, p, text)
 import Html.Attributes exposing (class)
 import Loading exposing (Status(..))
-import Material.DataTable as DataTable
-import Material.List as List
-import Material.List.Item as ListItem exposing (ListItem)
 import NaturalOrdering
 import Session exposing (Session)
 
@@ -36,6 +44,11 @@ init session id =
 toSession : Model -> Session
 toSession model =
     model.session
+
+
+updateSession : (Session -> Session) -> Model -> Model
+updateSession f model =
+    { model | session = f model.session }
 
 
 
@@ -70,31 +83,45 @@ loadReport base id =
 
 view : Model -> { title : List String, content : Html Msg }
 view model =
-    case model.report of
-        Loaded report ->
-            { title = [ "MeasureReport" ]
-            , content =
-                div [ class "main-content measure-report-page" ]
-                    [ viewReport report ]
-            }
-
-        _ ->
-            { title = [ "MeasureReport" ]
-            , content =
-                div [ class "main-content measure-report-page" ]
-                    [ text "" ]
-            }
+    { title = [ "MeasureReport" ]
+    , content =
+        div [ class "mt-16 ml-48 p-6 flex-grow bg-gray-100" ] <|
+            viewReport model.report
+    }
 
 
-viewReport : MeasureReport -> Html Msg
-viewReport report =
-    div [ class "measure-report" ] <|
+viewReport : Status MeasureReport -> List (Html Msg)
+viewReport data =
+    case data of
+        Loading ->
+            []
+
+        LoadingSlowly ->
+            []
+
+        Loaded loadedReport ->
+            [ viewLoadedReport loadedReport
+            ]
+
+        Reloading _ ->
+            []
+
+        ReloadingSlowly _ ->
+            []
+
+        Failed error ->
+            [ text "" ]
+
+
+viewLoadedReport : MeasureReport -> Html Msg
+viewLoadedReport report =
+    div [ class "" ] <|
         List.indexedMap viewGroup report.group
 
 
 viewGroup : Int -> MeasureReport.Group -> Html Msg
 viewGroup groupIdx { population, stratifier } =
-    div [ class "measure-report-group" ]
+    div [ class "" ]
         [ viewPopulationPanel groupIdx population
         , viewStratifierPanel groupIdx stratifier
         ]
@@ -102,16 +129,14 @@ viewGroup groupIdx { population, stratifier } =
 
 viewPopulationPanel : Int -> List MeasureReport.Population -> Html Msg
 viewPopulationPanel groupIdx populations =
-    div [ class "measure-report-population-panel" ]
-        [ h3 [ class "mdc-typography--headline5" ] [ text "Populations" ]
-        , case populations of
-            population :: morePopulations ->
-                List.list (List.config |> List.setNonInteractive True)
-                    (viewPopulation groupIdx 0 population)
-                    (List.indexedMap (\idx -> viewPopulation groupIdx (idx + 1)) morePopulations)
+    div [ class "mb-4" ]
+        [ h3 [ class "text-lg mb-2" ] [ text "Populations" ]
+        , if List.isEmpty populations then
+            p [] [ text "No populations" ]
 
-            _ ->
-                p [] [ text "No populations" ]
+          else
+            List.list (List.config |> List.setNonInteractive True) <|
+                List.indexedMap (viewPopulation groupIdx) populations
         ]
 
 
@@ -119,6 +144,7 @@ viewPopulation : Int -> Int -> MeasureReport.Population -> ListItem Msg
 viewPopulation groupIdx populationIdx { code, count } =
     ListItem.listItem
         ListItem.config
+        (String.fromInt populationIdx)
         [ text (populationType populationIdx code ++ ": " ++ countToString count)
         ]
 
@@ -134,8 +160,8 @@ populationType populationIdx code =
 
 viewStratifierPanel : Int -> List MeasureReport.Stratifier -> Html Msg
 viewStratifierPanel groupIdx stratifiers =
-    div [ class "measure-report-stratifier-panel" ]
-        [ h3 [ class "mdc-typography--headline5" ] [ text "Stratifiers" ]
+    div [ class "mb-4" ]
+        [ h3 [ class "text-lg mb-2" ] [ text "Stratifiers" ]
         , if List.isEmpty stratifiers then
             p [] [ text "No stratifiers" ]
 
@@ -154,13 +180,13 @@ viewStratifier groupIdx stratifierIdx stratifier =
         headerCell codeText =
             DataTable.cell [] [ text codeText ]
     in
-    div [ class "measure-report-stratifier" ]
-        [ div [ class "measure-report-stratifier__title" ]
-            [ h3 [ class "mdc-typography--headline6" ]
+    div [ class "" ]
+        [ div [ class "" ]
+            [ h3 [ class "text-md mb-2" ]
                 [ text (stratifierTitle stratifier.code) ]
             ]
         , DataTable.dataTable
-            DataTable.config
+            (DataTable.config |> DataTable.setAttributes [ class "mb-4" ])
             { thead =
                 [ DataTable.row [] <|
                     List.map headerCell codeTexts

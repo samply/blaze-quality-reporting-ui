@@ -18,7 +18,7 @@ import Json.Decode.Pipeline exposing (optional, required)
 
 
 type alias MeasureReport =
-    { id : Maybe Id
+    { id : Id
     , extension : List Extension
     , status : Status
     , type_ : Type
@@ -70,7 +70,7 @@ type alias Stratum =
 decoder : Decoder MeasureReport
 decoder =
     succeed MeasureReport
-        |> optional "id" (maybe string) Nothing
+        |> required "id" string
         |> optional "extension" (list Extension.decoder) []
         |> required "status" statusDecoder
         |> required "type" typeDecoder

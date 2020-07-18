@@ -12,10 +12,10 @@ app.ports.storeSession.subscribe(function (session) {
 app.ports.writeToClipboard.subscribe(function (text) {
     navigator.clipboard.writeText(text).then(
         function () {
-            app.ports.clipboardSuccess.send();
+            app.ports.clipboardSuccess && app.ports.clipboardSuccess.send();
         },
         function () {
-            app.ports.clipboardFailure.send();
+            app.ports.clipboardFailure && app.ports.clipboardFailure.send();
         }
     );
 });

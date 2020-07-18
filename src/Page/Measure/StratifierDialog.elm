@@ -8,17 +8,17 @@ module Page.Measure.StratifierDialog exposing
     , view
     )
 
+import Component.Button as Button
+import Component.Dialog as Dialog
 import Fhir.Expression as Expression
 import Fhir.Measure as Measure
 import Fhir.Measure.Stratifier exposing (newComponent)
 import Html exposing (Html)
 import Html.Attributes exposing (class)
 import List.Extra exposing (removeAt, updateAt)
-import Material.Button as Button
-import Material.Dialog as Dialog
-import MaterialUtil
 import Maybe.Extra as MaybeExtra
 import Page.Measure.StratifierDialog.ComponentForm as ComponentForm
+import Util
 
 
 
@@ -153,14 +153,14 @@ view { onMsg, onSave } model =
         , content =
             List.indexedMap (viewComponentForm onMsg onSave_ (List.length componentForms - 1)) componentForms
         , actions =
-            [ Button.text
+            [ Button.secondary
                 (Button.config
                     |> Button.setOnClick (onMsg ClickedClose)
                 )
                 "Cancel"
-            , Button.text
+            , Button.primary
                 (Button.config
-                    |> MaterialUtil.liftMaybe Button.setOnClick onSave_
+                    |> Util.liftMaybe Button.setOnClick onSave_
                     |> Button.setDisabled (not (isValid model))
                 )
                 "Save"

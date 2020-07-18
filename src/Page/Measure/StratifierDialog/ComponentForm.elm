@@ -9,14 +9,14 @@ module Page.Measure.StratifierDialog.ComponentForm exposing
     , view
     )
 
+import Component.Button as Button
+import Component.Icon as Icon
+import Component.TextArea as TextArea
+import Component.TextField as TextField
 import Events exposing (onEnter)
 import Fhir.Measure.Stratifier as Stratifier
 import Html exposing (Html, div)
 import Html.Attributes exposing (class)
-import Material.Icon as Icon
-import Material.IconButton as IconButton
-import Material.TextArea as TextArea
-import Material.TextField as TextField
 import Maybe.Extra as MaybeExtra
 
 
@@ -112,52 +112,58 @@ view { onMsg, control, onSave } model =
 
 
 addComponentButton onClick =
-    IconButton.iconButton
-        (IconButton.config |> IconButton.setOnClick onClick)
+    Button.icon
+        (Button.config |> Button.setOnClick onClick)
         "add_box"
 
 
 removeComponentButton onClick =
-    IconButton.iconButton
-        (IconButton.config |> IconButton.setOnClick onClick)
+    Button.icon
+        (Button.config |> Button.setOnClick onClick)
         "remove_circle"
 
 
 codeField onSave onMsg code =
-    TextField.filled
-        (TextField.config
-            |> TextField.setLabel (Just "Name")
-            |> TextField.setValue code
-            |> TextField.setOnInput (EnteredCode >> onMsg)
-            |> TextField.setRequired True
-            |> TextField.setValid
-                (Maybe.map (String.isEmpty >> not) code
-                    |> Maybe.withDefault False
-                )
-            |> TextField.setAttributes (MaybeExtra.toList (Maybe.map onEnter onSave))
-        )
+    Html.div [ class "mb-2" ]
+        [ Html.div [ class "mb-1" ] [ Html.text "Name" ]
+        , TextField.outlined
+            (TextField.config
+                |> TextField.setValue code
+                |> TextField.setOnInput (EnteredCode >> onMsg)
+                |> TextField.setRequired True
+                |> TextField.setValid
+                    (Maybe.map (String.isEmpty >> not) code
+                        |> Maybe.withDefault False
+                    )
+                |> TextField.setAttributes (MaybeExtra.toList (Maybe.map onEnter onSave))
+            )
+        ]
 
 
 descriptionField onSave onMsg description =
-    TextArea.filled
-        (TextArea.config
-            |> TextArea.setLabel (Just "Description")
-            |> TextArea.setValue description
-            |> TextArea.setOnInput (EnteredDescription >> onMsg)
-            |> TextArea.setAttributes (MaybeExtra.toList (Maybe.map onEnter onSave))
-        )
+    Html.div [ class "mb-2" ]
+        [ Html.div [ class "mb-1" ] [ Html.text "Description" ]
+        , TextArea.outlined
+            (TextArea.config
+                |> TextArea.setValue description
+                |> TextArea.setOnInput (EnteredDescription >> onMsg)
+                |> TextArea.setAttributes (MaybeExtra.toList (Maybe.map onEnter onSave))
+            )
+        ]
 
 
 criteriaField onSave onMsg expression =
-    TextField.filled
-        (TextField.config
-            |> TextField.setLabel (Just "CQL Criteria Name")
-            |> TextField.setValue expression
-            |> TextField.setOnInput (EnteredCriteria >> onMsg)
-            |> TextField.setRequired True
-            |> TextField.setValid
-                (Maybe.map (String.isEmpty >> not) expression
-                    |> Maybe.withDefault False
-                )
-            |> TextField.setAttributes (MaybeExtra.toList (Maybe.map onEnter onSave))
-        )
+    Html.div [ class "mb-2" ]
+        [ Html.div [ class "mb-1" ] [ Html.text "CQL Criteria Name" ]
+        , TextField.outlined
+            (TextField.config
+                |> TextField.setValue expression
+                |> TextField.setOnInput (EnteredCriteria >> onMsg)
+                |> TextField.setRequired True
+                |> TextField.setValid
+                    (Maybe.map (String.isEmpty >> not) expression
+                        |> Maybe.withDefault False
+                    )
+                |> TextField.setAttributes (MaybeExtra.toList (Maybe.map onEnter onSave))
+            )
+        ]

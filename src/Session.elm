@@ -17,10 +17,12 @@ import Json.Decode.Zipper exposing (zipper)
 import Json.Encode as Encode exposing (Value)
 import Json.Encode.Zipper as EncodeZipper
 import List.Zipper as Zipper exposing (Zipper)
+import Time
 
 
 type alias Session =
     { navKey : Nav.Key
+    , timeZone : Time.Zone
     , servers : Zipper Server
     }
 
@@ -34,6 +36,7 @@ type alias Server =
 default : Nav.Key -> Session
 default navKey =
     { navKey = navKey
+    , timeZone = Time.utc
     , servers =
         Zipper.fromCons
             { name = "Blaze LIFE"
@@ -88,6 +91,7 @@ decoder : Nav.Key -> Decoder Session
 decoder navKey =
     succeed Session
         |> hardcoded navKey
+        |> hardcoded Time.utc
         |> required "servers" (zipper serverDecoder)
 
 

@@ -17,19 +17,23 @@ import Fhir.Coding exposing (Coding)
 import Fhir.Encode exposing (object, optionalListPair, optionalPair, pair)
 import Fhir.Expression as Expression exposing (Expression)
 import Fhir.Measure.Stratifier as Stratifier
+import Fhir.Meta as Meta exposing (Meta)
 import Fhir.PrimitiveTypes exposing (Canonical, Id, Markdown, Uri)
+import Fhir.ValueSet.PublicationStatus as PublicationStatus exposing (PublicationStatus)
 import Json.Decode exposing (Decoder, list, maybe, string, succeed)
 import Json.Decode.Pipeline exposing (optional, required)
 import Json.Encode as Encode exposing (Value)
 
 
 type alias Measure =
-    { id : Maybe Id
+    { id : Id
+    , meta : Maybe Meta
     , url : Maybe Uri
     , version : Maybe String
     , name : Maybe String
     , title : Maybe String
     , subtitle : Maybe String
+    , status : PublicationStatus
     , subject : Maybe CodeableConcept
     , description : Maybe Markdown
     , library : List Canonical
@@ -49,7 +53,7 @@ type alias Group =
 type alias Population =
     { code : Maybe CodeableConcept
     , description : Maybe String
-    , criteria : Expression
+    , criteria : Maybe Expression
     }
 
 
@@ -125,12 +129,14 @@ encode : Measure -> Value
 encode measure =
     object
         [ pair "resourceType" Encode.string "Measure"
-        , optionalPair "id" Encode.string measure.id
+        , pair "id" Encode.string measure.id
+        , optionalPair "meta" Meta.encode measure.meta
         , optionalPair "url" Encode.string measure.url
         , optionalPair "version" Encode.string measure.version
         , optionalPair "name" Encode.string measure.name
         , optionalPair "title" Encode.string measure.title
         , optionalPair "subtitle" Encode.string measure.subtitle
+        , pair "status" PublicationStatus.encode measure.status
         , optionalPair "subjectCodeableConcept" CodeableConcept.encode measure.subject
         , optionalPair "description" Encode.string measure.description
         , optionalListPair "library" Encode.string measure.library
@@ -154,7 +160,7 @@ encodePopulation { code, description, criteria } =
     object
         [ optionalPair "code" CodeableConcept.encode code
         , optionalPair "description" Encode.string description
-        , pair "criteria" Expression.encode criteria
+        , optionalPair "criteria" Expression.encode criteria
         ]
 
 
@@ -171,12 +177,14 @@ encodeStratifier { code, description, criteria, component } =
 decoder : Decoder Measure
 decoder =
     succeed Measure
-        |> optional "id" (maybe string) Nothing
+        |> required "id" string
+        |> optional "meta" (maybe Meta.decoder) Nothing
         |> optional "url" (maybe string) Nothing
         |> optional "version" (maybe string) Nothing
         |> optional "name" (maybe string) Nothing
         |> optional "title" (maybe string) Nothing
         |> optional "subtitle" (maybe string) Nothing
+        |> optional "status" PublicationStatus.decoder PublicationStatus.Unknown
         |> optional "subjectCodeableConcept" (maybe CodeableConcept.decoder) Nothing
         |> optional "description" (maybe string) Nothing
         |> optional "library" (list string) []
@@ -198,7 +206,7 @@ populationDecoder =
     succeed Population
         |> optional "code" (maybe CodeableConcept.decoder) Nothing
         |> optional "description" (maybe string) Nothing
-        |> required "criteria" Expression.decoder
+        |> optional "criteria" (maybe Expression.decoder) Nothing
 
 
 stratifierDecoder : Decoder Stratifier

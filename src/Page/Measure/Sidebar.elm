@@ -32,17 +32,15 @@ init base measure =
         ( libraryPanel, cmd ) =
             LibraryPanel.init base (List.head measure.library)
 
-        url =
-            Maybe.map
-                (\id -> UrlBuilder.crossOrigin base [ "Measure", id ] [])
-                measure.id
+        apiUrl =
+            UrlBuilder.crossOrigin base [ "Measure", measure.id ] []
     in
     ( { measure = measure
       , urlPanel = UrlPanel.init measure.url
       , versionPanel = VersionPanel.init measure.version
       , subjectPanel = SubjectPanel.init (Measure.getSubjectCode measure)
       , libraryPanel = libraryPanel
-      , sharePanel = SharePanel.init url
+      , sharePanel = SharePanel.init apiUrl
       }
     , Cmd.map GotLibraryMsg cmd
     )

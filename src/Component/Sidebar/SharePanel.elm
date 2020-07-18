@@ -1,8 +1,8 @@
 module Component.Sidebar.SharePanel exposing (Model, Msg, init, update, view)
 
+import Component.Button as Button
 import Component.Sidebar.Entry as SidebarEntry exposing (SidebarEntry)
 import Component.Sidebar.SharePanel.CopyToServerDialog as CopyToServerDialog
-import Material.Button as Button
 import Ports
 import Session exposing (Server)
 
@@ -12,12 +12,12 @@ import Session exposing (Server)
 
 
 type alias Model =
-    { apiUrl : Maybe String
+    { apiUrl : String
     , copyToServerDialog : CopyToServerDialog.Model
     }
 
 
-init : Maybe String -> Model
+init : String -> Model
 init apiUrl =
     { apiUrl = apiUrl
     , copyToServerDialog = CopyToServerDialog.init
@@ -41,10 +41,7 @@ update msg model =
             updateCopyToServerDialog CopyToServerDialog.doOpen model
 
         ClickedCopyApiUrlToClipboard ->
-            ( model
-            , Maybe.map Ports.writeToClipboard model.apiUrl
-                |> Maybe.withDefault Cmd.none
-            )
+            ( model, Ports.writeToClipboard model.apiUrl )
 
         GotCopyToServerDialogMsg msg_ ->
             updateCopyToServerDialog (CopyToServerDialog.update msg_) model
@@ -76,15 +73,13 @@ view { servers, onMsg, onCopyToServer } { copyToServerDialog } =
     SidebarEntry.view SidebarEntry.config
         [ viewCopyToServerDialog servers onMsg onCopyToServer copyToServerDialog
         , SidebarEntry.actionButtons []
-            [ Button.outlined
+            [ Button.secondary
                 (Button.config
-                    |> Button.setDense True
                     |> Button.setOnClick (onMsg ClickedCopyToServer)
                 )
                 "Share"
-            , Button.outlined
+            , Button.secondary
                 (Button.config
-                    |> Button.setDense True
                     |> Button.setOnClick (onMsg ClickedCopyApiUrlToClipboard)
                 )
                 "Copy URL"

@@ -10,6 +10,7 @@ module Component.Sidebar.Entry exposing
     , view
     )
 
+import Component.Button as Button
 import Component.Sidebar.Entry.Internal as SidebarEntry
     exposing
         ( Config(..)
@@ -17,7 +18,6 @@ import Component.Sidebar.Entry.Internal as SidebarEntry
         )
 import Html exposing (Attribute, Html, div)
 import Html.Attributes exposing (class)
-import Material.Button as Button
 
 
 type alias SidebarEntry msg =
@@ -45,7 +45,7 @@ view ((Config { additionalAttributes }) as config_) nodes =
     SidebarEntry
         { config = config_
         , node =
-            div (class "sidebar-entry" :: additionalAttributes)
+            div (class "p-2 border-b border-gray-400" :: additionalAttributes)
                 nodes
         }
 
@@ -53,7 +53,7 @@ view ((Config { additionalAttributes }) as config_) nodes =
 title : List (Attribute msg) -> List (Html msg) -> Html msg
 title additionalAttributes nodes =
     div
-        (class "sidebar-entry__title mdc-typography--subtitle1"
+        (class "flex justify-between mb-2"
             :: additionalAttributes
         )
         nodes
@@ -62,7 +62,7 @@ title additionalAttributes nodes =
 content : List (Attribute msg) -> List (Html msg) -> Html msg
 content additionalAttributes nodes =
     div
-        (class "sidebar-entry__content mdc-typography--body2"
+        (class "text-gray-700 text-sm mb-2"
             :: additionalAttributes
         )
         nodes
@@ -70,13 +70,9 @@ content additionalAttributes nodes =
 
 editButton : Button.Config msg -> Html msg
 editButton config_ =
-    Button.text (config_ |> Button.setDense True) "edit"
+    Button.text config_ "edit"
 
 
 actionButtons : List (Attribute msg) -> List (Html msg) -> Html msg
 actionButtons additionalAttributes nodes =
-    div
-        (class "sidebar-entry__action-buttons"
-            :: additionalAttributes
-        )
-        nodes
+    div (class "space-x-2" :: additionalAttributes) nodes

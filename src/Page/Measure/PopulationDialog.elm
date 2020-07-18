@@ -8,17 +8,17 @@ module Page.Measure.PopulationDialog exposing
     , view
     )
 
+import Component.Button as Button
+import Component.Dialog as Dialog
+import Component.TextArea as TextArea
+import Component.TextField as TextField
 import Events exposing (onEnter)
 import Fhir.CodeableConcept as CodeableConcept
 import Fhir.Measure as Measure
 import Html exposing (Html)
 import Html.Attributes exposing (class)
-import Material.Button as Button
-import Material.Dialog as Dialog
-import Material.TextArea as TextArea
-import Material.TextField as TextField
-import MaterialUtil
 import Maybe.Extra as MaybeExtra
+import Util
 
 
 type Model
@@ -94,7 +94,7 @@ update msg model =
 
 
 updateCriteria f population =
-    { population | criteria = f population.criteria }
+    { population | criteria = Maybe.map f population.criteria }
 
 
 updatePopulation f model =
@@ -140,7 +140,6 @@ view { onMsg, onSave } model =
         (Dialog.config
             |> Dialog.setOpen (isOpen model)
             |> Dialog.setOnClose (onMsg ClickedClose)
-            |> Dialog.setAttributes [ class "measure-population-dialog" ]
         )
         { title = Just "Population"
         , content =
@@ -149,19 +148,19 @@ view { onMsg, onSave } model =
                 |> Maybe.andThen .description
                 |> descriptionField onSave_ onMsg
             , population
-                |> Maybe.map .criteria
+                |> Maybe.andThen .criteria
                 |> Maybe.andThen .expression
                 |> criteriaField onSave_ onMsg
             ]
         , actions =
-            [ Button.text
+            [ Button.secondary
                 (Button.config
                     |> Button.setOnClick (onMsg ClickedClose)
                 )
                 "Cancel"
-            , Button.text
+            , Button.primary
                 (Button.config
-                    |> MaterialUtil.liftMaybe Button.setOnClick onSave_
+                    |> Util.liftMaybe Button.setOnClick onSave_
                     |> Button.setDisabled
                         (code
                             |> Maybe.map String.isEmpty
@@ -183,51 +182,57 @@ isOpen model =
 
 
 codeField onSave onMsg code =
-    TextField.filled
-        (TextField.config
-            |> TextField.setLabel (Just "Type")
-            |> TextField.setValue code
-            |> TextField.setOnInput (EnteredCode >> onMsg)
-            |> TextField.setRequired True
-            |> TextField.setValid
-                (Maybe.map (String.isEmpty >> not) code
-                    |> Maybe.withDefault False
-                )
-            |> TextField.setDisabled True
-            |> TextField.setAttributes
-                (onSave
-                    |> Maybe.map onEnter
-                    |> Maybe.map List.singleton
-                    |> Maybe.withDefault []
-                )
-        )
+    Html.div [ class "mb-2" ]
+        [ Html.div [ class "mb-1" ] [ Html.text "Type" ]
+        , TextField.outlined
+            (TextField.config
+                |> TextField.setValue code
+                |> TextField.setOnInput (EnteredCode >> onMsg)
+                |> TextField.setRequired True
+                |> TextField.setValid
+                    (Maybe.map (String.isEmpty >> not) code
+                        |> Maybe.withDefault False
+                    )
+                |> TextField.setDisabled True
+                |> TextField.setAttributes
+                    (onSave
+                        |> Maybe.map onEnter
+                        |> Maybe.map List.singleton
+                        |> Maybe.withDefault []
+                    )
+            )
+        ]
 
 
 descriptionField onSave onMsg description =
-    TextArea.filled
-        (TextArea.config
-            |> TextArea.setLabel (Just "Description")
-            |> TextArea.setValue description
-            |> TextArea.setOnInput (EnteredDescription >> onMsg)
-            |> TextArea.setAttributes
-                (onSave
-                    |> Maybe.map onEnter
-                    |> Maybe.map List.singleton
-                    |> Maybe.withDefault []
-                )
-        )
+    Html.div [ class "mb-2" ]
+        [ Html.div [ class "mb-1" ] [ Html.text "Description" ]
+        , TextArea.outlined
+            (TextArea.config
+                |> TextArea.setValue description
+                |> TextArea.setOnInput (EnteredDescription >> onMsg)
+                |> TextArea.setAttributes
+                    (onSave
+                        |> Maybe.map onEnter
+                        |> Maybe.map List.singleton
+                        |> Maybe.withDefault []
+                    )
+            )
+        ]
 
 
 criteriaField onSave onMsg expression =
-    TextField.filled
-        (TextField.config
-            |> TextField.setLabel (Just "Criteria")
-            |> TextField.setValue expression
-            |> TextField.setOnInput (EnteredCriteria >> onMsg)
-            |> TextField.setAttributes
-                (onSave
-                    |> Maybe.map onEnter
-                    |> Maybe.map List.singleton
-                    |> Maybe.withDefault []
-                )
-        )
+    Html.div [ class "mb-2" ]
+        [ Html.div [ class "mb-1" ] [ Html.text "Criteria" ]
+        , TextField.outlined
+            (TextField.config
+                |> TextField.setValue expression
+                |> TextField.setOnInput (EnteredCriteria >> onMsg)
+                |> TextField.setAttributes
+                    (onSave
+                        |> Maybe.map onEnter
+                        |> Maybe.map List.singleton
+                        |> Maybe.withDefault []
+                    )
+            )
+        ]

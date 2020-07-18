@@ -1,13 +1,15 @@
 module Page.Measure.Sidebar.LibraryPanel exposing (Model, Msg, init, update, view)
 
+import Component.Button as Button
 import Component.Sidebar.Entry as SidebarEntry exposing (SidebarEntry)
 import Fhir.Bundle exposing (Bundle)
 import Fhir.Http as FhirHttp
 import Fhir.Library as Library exposing (Library)
 import Fhir.PrimitiveTypes exposing (Canonical)
 import Html exposing (Html, a, text)
+import Html.Attributes exposing (class)
 import Json.Decode exposing (decodeValue)
-import Material.Button as Button
+import Loading exposing (Status(..))
 import Route exposing (href)
 import Url.Builder as UrlBuilder
 
@@ -18,16 +20,17 @@ import Url.Builder as UrlBuilder
 
 type alias Model =
     { url : Maybe Canonical
-    , library : Maybe Library
+    , library : Status Library
     }
 
 
 init : String -> Maybe Canonical -> ( Model, Cmd Msg )
 init base url =
     ( { url = url
-      , library = Nothing
+      , library = Loading
       }
-    , Maybe.map (searchLibrary base) url |> Maybe.withDefault Cmd.none
+    , Maybe.map (searchLibrary base) url
+        |> Maybe.withDefault Cmd.none
     )
 
 
@@ -37,6 +40,7 @@ init base url =
 
 type Msg
     = CompletedSearch (Result FhirHttp.Error Bundle)
+    | PassedSlowLoadingThreshold
 
 
 update : Msg -> Model -> Model
@@ -45,26 +49,35 @@ update msg model =
         CompletedSearch (Ok bundle) ->
             case decodeLibraries bundle of
                 [ onlyLibrary ] ->
-                    { model | library = Just onlyLibrary }
+                    { model | library = Loaded onlyLibrary }
 
                 _ ->
                     model
 
-        CompletedSearch (Err _) ->
-            model
+        CompletedSearch (Err error) ->
+            { model | library = Failed error }
+
+        PassedSlowLoadingThreshold ->
+            { model | library = Loading.markLoadingSlowly model.library }
 
 
 searchLibrary base url =
-    FhirHttp.searchType CompletedSearch
-        base
-        "Library"
-        [ UrlBuilder.string "url" url ]
+    Cmd.batch
+        [ FhirHttp.searchType CompletedSearch
+            base
+            "Library"
+            [ UrlBuilder.string "url" url ]
+        , Loading.slowThreshold PassedSlowLoadingThreshold
+        ]
 
 
 decodeLibraries : Bundle -> List Library
 decodeLibraries { entry } =
     List.filterMap
-        (.resource >> decodeValue Library.decoder >> Result.toMaybe)
+        (.resource
+            >> Maybe.map (decodeValue Library.decoder)
+            >> Maybe.andThen Result.toMaybe
+        )
         entry
 
 
@@ -84,7 +97,7 @@ view { onEdit } model =
             , SidebarEntry.editButton
                 (Button.config |> Button.setOnClick onEdit)
             ]
-        , SidebarEntry.content []
+        , SidebarEntry.content [ class "truncate" ]
             [ libraryLink model ]
         ]
 
@@ -93,25 +106,30 @@ libraryLink : Model -> Html msg
 libraryLink model =
     case model.url of
         Just url ->
-            case Maybe.andThen .id model.library of
-                Just id ->
-                    a [ href (Route.Library id) ]
-                        [ model.library
-                            |> Maybe.andThen libraryTitle
-                            |> Maybe.withDefault url
-                            |> text
-                        ]
+            case model.library of
+                LoadingSlowly ->
+                    text url
 
-                Nothing ->
-                    model.library
-                        |> Maybe.andThen libraryTitle
-                        |> Maybe.withDefault url
-                        |> text
+                Loaded library ->
+                    a [ href (Route.Library library.id) ]
+                        [ text <| libraryTitle library ]
+
+                Reloading library ->
+                    a [ href (Route.Library library.id) ]
+                        [ text <| libraryTitle library ]
+
+                ReloadingSlowly library ->
+                    a [ href (Route.Library library.id) ]
+                        [ text <| libraryTitle library ]
+
+                _ ->
+                    Html.span [ class "invisible" ] [ text url ]
 
         Nothing ->
             text "No associated library"
 
 
 libraryTitle { title, name, id } =
-    List.filterMap identity [ title, name, id ]
+    List.filterMap identity [ title, name ]
         |> List.head
+        |> Maybe.withDefault id

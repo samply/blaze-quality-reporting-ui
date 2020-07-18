@@ -1,20 +1,28 @@
-module Page.Measure exposing (Model, Msg, init, toSession, update, view)
+module Page.Measure exposing
+    ( Model
+    , Msg
+    , init
+    , toSession
+    , update
+    , updateSession
+    , view
+    )
 
+import Component.Button as Button
 import Component.Error as Error
 import Component.Header as Header
+import Component.List as List
+import Component.List.Item as ListItem exposing (ListItem)
 import Fhir.Http as FhirHttp
 import Fhir.Library exposing (Library)
 import Fhir.Measure as Measure exposing (Measure)
 import Fhir.PrimitiveTypes exposing (Id)
-import Html exposing (Html, div, h3, h4, text)
+import Html exposing (Html, div, h3, text)
 import Html.Attributes exposing (class)
 import Http
 import List.Extra exposing (getAt, removeAt, setAt, updateAt)
 import List.Zipper as Zipper
 import Loading exposing (Status(..))
-import Material.Button as Button
-import Material.Card as Card
-import Material.LayoutGrid as LayoutGrid exposing (span12)
 import Maybe.Extra as MaybeExtra
 import Page.Measure.AssocLibraryDialog as AssocLibraryDialog
 import Page.Measure.PopulationDialog as PopulationDialog
@@ -67,6 +75,11 @@ init session id =
 toSession : Model -> Session
 toSession model =
     model.session
+
+
+updateSession : (Session -> Session) -> Model -> Model
+updateSession f model =
+    { model | session = f model.session }
 
 
 
@@ -526,49 +539,16 @@ deleteMeasure base measureId =
 
 view : Model -> { title : List String, content : Html Msg }
 view model =
-    case model.data of
-        Loaded data ->
-            { title = [ "Measure" ]
-            , content =
-                div [ class "main-content measure-page" ]
-                    [ viewPopulationDialog model
-                    , viewStratifierDialog model
-                    , viewAssocLibraryDialog model
-                    , viewMeasure data
-                    , viewSidebar model.session data.sidebar
-                    ]
-            }
-
-        Loading ->
-            { title = [ "Measure" ]
-            , content =
-                div [ class "main-content measure-page" ]
-                    [ viewPopulationDialog model
-                    , viewStratifierDialog model
-                    , viewAssocLibraryDialog model
-                    ]
-            }
-
-        LoadingSlowly ->
-            { title = [ "Measure" ]
-            , content =
-                div [ class "main-content measure-page" ]
-                    [ viewPopulationDialog model
-                    , viewStratifierDialog model
-                    , viewAssocLibraryDialog model
-                    ]
-            }
-
-        Failed error ->
-            { title = [ "Measure" ]
-            , content =
-                div [ class "main-content measure-page measure-page--error" ]
-                    [ viewPopulationDialog model
-                    , viewStratifierDialog model
-                    , viewAssocLibraryDialog model
-                    , viewError error
-                    ]
-            }
+    { title = [ "Measure" ]
+    , content =
+        div [ class "mt-16 ml-48 mr-64 p-6 flex-grow bg-gray-100" ]
+            ([ viewPopulationDialog model
+             , viewStratifierDialog model
+             , viewAssocLibraryDialog model
+             ]
+                ++ viewData model.session model.data
+            )
+    }
 
 
 viewPopulationDialog : Model -> Html Msg
@@ -598,27 +578,37 @@ viewAssocLibraryDialog model =
         model.assocLibraryDialog
 
 
-viewSidebar : Session -> Sidebar.Model -> Html Msg
-viewSidebar session sidebar =
-    Sidebar.view
-        { servers = Zipper.toList session.servers
-        , onMsg = GotSidebarMsg
-        , onSave = ClickedSidebarSave
-        , onLibraryEdit = ClickedSidebarLibraryEdit
-        , onCopyToServer = ClickedSidebarCopyToServer
-        }
-        sidebar
+viewData : Session -> Status Data -> List (Html Msg)
+viewData session data =
+    case data of
+        Loading ->
+            []
+
+        LoadingSlowly ->
+            []
+
+        Loaded loadedData ->
+            [ viewMeasure loadedData
+            , viewSidebar session loadedData.sidebar
+            ]
+
+        Reloading _ ->
+            []
+
+        ReloadingSlowly _ ->
+            []
+
+        Failed error ->
+            [ viewError error ]
 
 
 viewMeasure : Data -> Html Msg
 viewMeasure { measure, header, reportPanel } =
-    LayoutGrid.layoutGrid [ class "measure" ]
-        [ LayoutGrid.inner []
-            ([ viewHeader header ]
-                ++ List.indexedMap viewGroup measure.group
-                ++ [ viewReportPanel reportPanel ]
-            )
-        ]
+    div [ class "" ]
+        ([ viewHeader header ]
+            ++ List.indexedMap viewGroup measure.group
+            ++ [ viewReportPanel reportPanel ]
+        )
 
 
 viewHeader header =
@@ -632,92 +622,60 @@ viewHeader header =
 
 viewGroup : Int -> Measure.Group -> Html Msg
 viewGroup groupIdx { population, stratifier } =
-    LayoutGrid.cell [ span12, class "measure-group" ]
+    div [ class "" ]
         [ viewPopulationPanel groupIdx population
         , viewStratifierPanel groupIdx stratifier
         ]
 
 
 viewPopulationPanel groupIdx populations =
-    LayoutGrid.inner [ class "measure-population-panel" ] <|
-        [ LayoutGrid.cell [ span12 ]
-            [ h3 [ class "mdc-typography--headline5" ] [ text "Populations" ] ]
-        ]
-            ++ List.indexedMap
+    div [ class "mb-4" ] <|
+        [ h3 [ class "text-lg mb-2" ] [ text "Populations" ]
+        , List.list List.config
+            (List.indexedMap
                 (\idx population ->
-                    LayoutGrid.cell []
-                        [ viewPopulation groupIdx idx population ]
+                    viewPopulation groupIdx idx population
                 )
                 populations
+            )
+        ]
 
 
-viewPopulation : Int -> Int -> Measure.Population -> Html Msg
+viewPopulation : Int -> Int -> Measure.Population -> ListItem Msg
 viewPopulation groupIdx populationIdx { code, description } =
-    Card.card
-        (Card.config
-            |> Card.setOutlined True
-            |> Card.setAttributes [ class "measure-population" ]
+    ListItem.listItem
+        (ListItem.config
+            |> ListItem.setOnClick (ClickedPopulationEdit groupIdx populationIdx)
         )
-        { blocks =
-            [ Card.block <|
-                div [ class "measure-population__header" ]
-                    [ h4
-                        [ class "measure-population__title"
-                        , class "mdc-typography--headline6"
-                        ]
-                        [ code
-                            |> Maybe.andThen (.coding >> List.head)
-                            |> Maybe.andThen .code
-                            |> Maybe.withDefault
-                                ("Population " ++ String.fromInt (populationIdx + 1))
-                            |> text
-                        ]
-                    ]
-            , Card.block <|
-                div [ class "measure-population__description" ]
-                    [ text (Maybe.withDefault "" description) ]
-            ]
-        , actions =
-            Just <|
-                Card.actions
-                    { buttons =
-                        [ Card.button
-                            (Button.config
-                                |> Button.setOnClick
-                                    (ClickedPopulationEdit
-                                        groupIdx
-                                        populationIdx
-                                    )
-                            )
-                            "edit"
-                        ]
-                    , icons = []
-                    }
-        }
+        (String.fromInt populationIdx)
+        [ code
+            |> Maybe.andThen (.coding >> List.head)
+            |> Maybe.andThen .code
+            |> Maybe.withDefault
+                ("Population " ++ String.fromInt (populationIdx + 1))
+            |> text
+        ]
 
 
 viewStratifierPanel groupIdx stratifiers =
-    LayoutGrid.inner [ class "measure-stratifier-panel" ] <|
-        [ LayoutGrid.cell [ span12 ]
-            [ h3 [ class "mdc-typography--headline5" ] [ text "Stratifiers" ] ]
-        ]
-            ++ List.indexedMap
+    div [ class "mb-4" ] <|
+        [ h3 [ class "text-lg mb-2" ] [ text "Stratifiers" ]
+        , List.list (List.config |> List.setAttributes [ class "mb-2" ])
+            (List.indexedMap
                 (\idx stratifier ->
-                    LayoutGrid.cell []
-                        [ viewStratifier groupIdx idx stratifier ]
+                    viewStratifier groupIdx idx stratifier
                 )
                 stratifiers
-            ++ [ LayoutGrid.cell [ span12 ]
-                    [ Button.outlined
-                        (Button.config
-                            |> Button.setOnClick (ClickedAddStratifier groupIdx)
-                        )
-                        "add stratifier"
-                    ]
-               ]
+            )
+        , Button.secondary
+            (Button.config
+                |> Button.setOnClick (ClickedAddStratifier groupIdx)
+            )
+            "add stratifier"
+        ]
 
 
-viewStratifier : Int -> Int -> Measure.Stratifier -> Html Msg
+viewStratifier : Int -> Int -> Measure.Stratifier -> ListItem Msg
 viewStratifier groupIdx stratifierIdx { code, description, component } =
     let
         title =
@@ -732,50 +690,12 @@ viewStratifier groupIdx stratifierIdx { code, description, component } =
                     |> List.filterMap (.code >> Maybe.andThen .text)
                     |> String.join ", "
     in
-    Card.card
-        (Card.config
-            |> Card.setOutlined True
-            |> Card.setAttributes [ class "measure-stratifier" ]
+    ListItem.listItem
+        (ListItem.config
+            |> ListItem.setOnClick (ClickedStratifierEdit groupIdx stratifierIdx)
         )
-        { blocks =
-            [ Card.block <|
-                div [ class "measure-stratifier__header" ]
-                    [ h4
-                        [ class "measure-stratifier__title"
-                        , class "mdc-typography--headline6"
-                        ]
-                        [ text title ]
-                    ]
-            , Card.block <|
-                div [ class "measure-stratifier__description" ]
-                    [ text (Maybe.withDefault "" description) ]
-            ]
-        , actions =
-            Just <|
-                Card.actions
-                    { buttons =
-                        [ Card.button
-                            (Button.config
-                                |> Button.setOnClick
-                                    (ClickedStratifierEdit
-                                        groupIdx
-                                        stratifierIdx
-                                    )
-                            )
-                            "edit"
-                        , Card.button
-                            (Button.config
-                                |> Button.setOnClick
-                                    (ClickedStratifierDelete
-                                        groupIdx
-                                        stratifierIdx
-                                    )
-                            )
-                            "delete"
-                        ]
-                    , icons = []
-                    }
-        }
+        (String.fromInt stratifierIdx)
+        [ text title ]
 
 
 viewReportPanel reportPanel =
@@ -785,6 +705,18 @@ viewReportPanel reportPanel =
         , onReportClick = ClickedReport
         }
         reportPanel
+
+
+viewSidebar : Session -> Sidebar.Model -> Html Msg
+viewSidebar session sidebar =
+    Sidebar.view
+        { servers = Zipper.toList session.servers
+        , onMsg = GotSidebarMsg
+        , onSave = ClickedSidebarSave
+        , onLibraryEdit = ClickedSidebarLibraryEdit
+        , onCopyToServer = ClickedSidebarCopyToServer
+        }
+        sidebar
 
 
 viewError : FhirHttp.Error -> Html Msg
