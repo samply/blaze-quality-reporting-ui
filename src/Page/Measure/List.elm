@@ -31,7 +31,7 @@ import Loading exposing (Status(..))
 import Page.Measure.List.Header as Header
 import Page.Measure.List.Query exposing (Query)
 import Page.Measure.List.Sort as Sort exposing (Sort)
-import Route
+import Route exposing (Route)
 import Session exposing (Session)
 import String.Extra
 import Task
@@ -137,14 +137,14 @@ type Msg
     | GotHeaderSortSelect Sort
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
+update : Msg -> Model -> ( Model, Cmd Msg, Maybe Route )
 update msg model =
     case msg of
         ClickedMeasure measure ->
-            ( model, pushMeasureUrl model measure.id )
+            ( model, Cmd.none, Just (Route.Measure measure.id) )
 
         ClickedNewMeasure ->
-            ( model, createMeasure (Session.getBase model.session) )
+            ( model, createMeasure (Session.getBase model.session), Nothing )
 
         ClickedStatus status ->
             updateQuery (setQueryStatus status) model
@@ -155,6 +155,7 @@ update msg model =
                 |> Loading.andThen .firstUrl
                 |> Maybe.map (loadPage CompletedLoadingInitialMeasurePage)
                 |> Maybe.withDefault Cmd.none
+            , Nothing
             )
 
         ClickedNext oldPageNum ->
@@ -163,6 +164,7 @@ update msg model =
                 |> Loading.andThen .nextUrl
                 |> Maybe.map (loadPage (CompletedLoadingNextMeasurePage oldPageNum))
                 |> Maybe.withDefault Cmd.none
+            , Nothing
             )
 
         SearchMeasures title ->
@@ -171,27 +173,31 @@ update msg model =
         Hit Slash ->
             ( model
             , Task.attempt SearchFieldFocused (Dom.focus "search-field")
+            , Nothing
             )
 
         Hit Esc ->
             ( model
             , Task.attempt SearchFieldBlurred (Dom.blur "search-field")
+            , Nothing
             )
 
         SearchFieldFocused _ ->
-            ( { model | searchFieldFocused = True }, Cmd.none )
+            ( { model | searchFieldFocused = True }, Cmd.none, Nothing )
 
         SearchFieldBlurred _ ->
-            ( { model | searchFieldFocused = False }, Cmd.none )
+            ( { model | searchFieldFocused = False }, Cmd.none, Nothing )
 
         CompletedLoadingInitialMeasurePage (Ok bundle) ->
             ( { model | measurePage = Loaded (decodeInitialMeasurePage bundle) }
             , Cmd.none
+            , Nothing
             )
 
         CompletedLoadingInitialMeasurePage (Err error) ->
             ( { model | measurePage = Failed error }
             , Cmd.none
+            , Nothing
             )
 
         CompletedLoadingNextMeasurePage oldPageNum (Ok bundle) ->
@@ -204,11 +210,13 @@ update msg model =
             in
             ( { model | measurePage = Loaded page }
             , Cmd.none
+            , Nothing
             )
 
         CompletedLoadingNextMeasurePage _ (Err error) ->
             ( { model | measurePage = Failed error }
             , Cmd.none
+            , Nothing
             )
 
         PassedSlowLoadingThreshold ->
@@ -216,32 +224,37 @@ update msg model =
                 | measurePage = Loading.markLoadingSlowly model.measurePage
               }
             , Cmd.none
+            , Nothing
             )
 
         CompletedCreatingMeasure (Ok measure) ->
             ( model
-            , pushMeasureUrl model measure.id
+            , Cmd.none
+            , Just (Route.Measure measure.id)
             )
 
         CompletedCreatingMeasure (Err _) ->
-            ( model, Cmd.none )
+            ( model, Cmd.none, Nothing )
 
         GotCurrentTime currentTime ->
-            ( { model | currentTime = currentTime }, Cmd.none )
+            ( { model | currentTime = currentTime }, Cmd.none, Nothing )
 
         GotHeaderMsg headerMsg ->
             let
                 ( header, headerCmd ) =
                     Header.update headerMsg model.header
             in
-            ( { model | header = header }, headerCmd |> Cmd.map GotHeaderMsg )
+            ( { model | header = header }
+            , headerCmd |> Cmd.map GotHeaderMsg
+            , Nothing
+            )
 
         GotHeaderSortSelect sort ->
             { model | header = Header.closeSortDropdown model.header }
                 |> updateQuery (setQuerySort sort)
 
 
-updateQuery : (Query -> Query) -> Model -> ( Model, Cmd Msg )
+updateQuery : (Query -> Query) -> Model -> ( Model, Cmd Msg, Maybe Route )
 updateQuery f model =
     let
         newQuery =
@@ -259,11 +272,8 @@ updateQuery f model =
         [ searchMeasures (Session.getBase model.session) newQuery
         , headerCmd |> Cmd.map GotHeaderMsg
         ]
+    , Nothing
     )
-
-
-pushMeasureUrl model id =
-    Route.pushUrl (Session.toNavKey model.session) (Route.Measure id)
 
 
 searchMeasures : String -> Query -> Cmd Msg

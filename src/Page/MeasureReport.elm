@@ -19,6 +19,7 @@ import Html exposing (Html, div, h3, p, text)
 import Html.Attributes exposing (class)
 import Loading exposing (Status(..))
 import NaturalOrdering
+import Route exposing (Route)
 import Session exposing (Session)
 
 
@@ -59,14 +60,14 @@ type Msg
     = CompletedLoadReport (Result FhirHttp.Error MeasureReport)
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
+update : Msg -> Model -> ( Model, Cmd Msg, Maybe Route )
 update msg model =
     case msg of
         CompletedLoadReport (Ok report) ->
-            ( { model | report = Loaded report }, Cmd.none )
+            ( { model | report = Loaded report }, Cmd.none, Nothing )
 
         CompletedLoadReport (Err error) ->
-            ( { model | report = Failed error }, Cmd.none )
+            ( { model | report = Failed error }, Cmd.none, Nothing )
 
 
 loadReport base id =

@@ -29,7 +29,7 @@ import Page.Measure.PopulationDialog as PopulationDialog
 import Page.Measure.ReportPanel as ReportPanel
 import Page.Measure.Sidebar as Sidebar
 import Page.Measure.StratifierDialog as StratifierDialog
-import Route
+import Route exposing (Route)
 import Session exposing (Server, Session)
 
 
@@ -114,7 +114,7 @@ type Msg
     | GotReportPanelMsg ReportPanel.Msg
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
+update : Msg -> Model -> ( Model, Cmd Msg, Maybe Route )
 update msg model =
     case msg of
         ClickedHeaderSave title description ->
@@ -128,11 +128,13 @@ update msg model =
                         |> saveMeasure (Session.getBase model.session) model.measureId
                 )
                 model
+            , Nothing
             )
 
         ClickedHeaderDelete ->
             ( model
             , deleteMeasure (Session.getBase model.session) model.measureId
+            , Nothing
             )
 
         ClickedPopulationEdit groupIdx populationIdx ->
@@ -163,6 +165,7 @@ update msg model =
                 _ ->
                     model
             , Cmd.none
+            , Nothing
             )
 
         ClickedStratifierEdit groupIdx stratifierIdx ->
@@ -193,6 +196,7 @@ update msg model =
                 _ ->
                     model
             , Cmd.none
+            , Nothing
             )
 
         ClickedStratifierDelete groupIdx stratifierIdx ->
@@ -203,6 +207,7 @@ update msg model =
                         |> saveMeasure (Session.getBase model.session) model.measureId
                 )
                 model
+            , Nothing
             )
 
         ClickedAddStratifier groupIdx ->
@@ -215,6 +220,7 @@ update msg model =
                             |> Just
                 }
             , Cmd.none
+            , Nothing
             )
 
         ClickedLibraryAssoc ->
@@ -226,6 +232,7 @@ update msg model =
         ClickedSidebarSave measure ->
             ( model
             , saveMeasure (Session.getBase model.session) model.measureId measure
+            , Nothing
             )
 
         ClickedSidebarCopyToServer server ->
@@ -236,6 +243,7 @@ update msg model =
 
                 _ ->
                     Cmd.none
+            , Nothing
             )
 
         ClickedPopulationSaveAtUpdate groupIdx populationIdx population ->
@@ -248,6 +256,7 @@ update msg model =
                         |> saveMeasure (Session.getBase model.session) model.measureId
                 )
                 model
+            , Nothing
             )
 
         ClickedStratifierSaveAtAdd groupIdx stratifier ->
@@ -260,6 +269,7 @@ update msg model =
                         |> saveMeasure (Session.getBase model.session) model.measureId
                 )
                 model
+            , Nothing
             )
 
         ClickedStratifierSaveAtUpdate groupIdx stratifierIdx stratifier ->
@@ -272,13 +282,11 @@ update msg model =
                         |> saveMeasure (Session.getBase model.session) model.measureId
                 )
                 model
+            , Nothing
             )
 
         ClickedReport id ->
-            ( model
-            , Route.pushUrl (Session.toNavKey model.session)
-                (Route.MeasureReport id)
-            )
+            ( model, Cmd.none, Just (Route.MeasureReport id) )
 
         SelectedLibrary library ->
             ( model
@@ -288,6 +296,7 @@ update msg model =
                         |> saveMeasure (Session.getBase model.session) model.measureId
                 )
                 model
+            , Nothing
             )
 
         CompletedLoadMeasure (Ok measure) ->
@@ -296,11 +305,12 @@ update msg model =
         CompletedLoadMeasure (Err error) ->
             ( { model | data = Failed error }
             , Cmd.none
+            , Nothing
             )
 
         CompletedSaveMeasure (Ok measure) ->
             let
-                ( newModel, cmd ) =
+                ( newModel, cmd, maybeRoute ) =
                     loaded measure model
             in
             ( newModel
@@ -308,14 +318,15 @@ update msg model =
                 |> updateStratifierDialog StratifierDialog.doClose
                 |> closeAssocLibraryDialog
             , cmd
+            , maybeRoute
             )
 
         CompletedSaveMeasure (Err _) ->
-            ( model, Cmd.none )
+            ( model, Cmd.none, Nothing )
 
         CompletedDuplicateMeasure (Ok measure) ->
             let
-                ( newModel, cmd ) =
+                ( newModel, cmd, maybeRoute ) =
                     loaded measure model
             in
             ( newModel
@@ -323,27 +334,31 @@ update msg model =
                 |> updateStratifierDialog StratifierDialog.doClose
                 |> closeAssocLibraryDialog
             , cmd
+            , maybeRoute
             )
 
         CompletedDuplicateMeasure (Err _) ->
-            ( model, Cmd.none )
+            ( model, Cmd.none, Nothing )
 
         CompletedDeleteMeasure (Ok _) ->
             ( model
-            , Route.pushUrl (Session.toNavKey model.session) Route.MeasureList
+            , Cmd.none
+            , Just Route.MeasureList
             )
 
         CompletedDeleteMeasure (Err _) ->
-            ( model, Cmd.none )
+            ( model, Cmd.none, Nothing )
 
         GotPopulationDialogMsg msg_ ->
             ( updatePopulationDialog (PopulationDialog.update msg_) model
             , Cmd.none
+            , Nothing
             )
 
         GotStratifierDialogMsg msg_ ->
             ( updateStratifierDialog (StratifierDialog.update msg_) model
             , Cmd.none
+            , Nothing
             )
 
         GotAssocLibraryDialogMsg msg_ ->
@@ -354,17 +369,18 @@ update msg model =
                 updateHeader f =
                     updateData (\data -> { data | header = f data.header })
             in
-            ( updateHeader (Header.update msg_) model, Cmd.none )
+            ( updateHeader (Header.update msg_) model, Cmd.none, Nothing )
 
         GotSidebarMsg msg_ ->
             updateDataWithCmd
                 (\data ->
                     let
-                        ( sidebar, cmd ) =
+                        ( sidebar, cmd, maybeRoute ) =
                             Sidebar.update msg_ data.sidebar
                     in
                     ( { data | sidebar = sidebar }
                     , Cmd.map GotSidebarMsg cmd
+                    , maybeRoute
                     )
                 )
                 model
@@ -378,6 +394,7 @@ update msg model =
                     in
                     ( { data | reportPanel = reportPanel }
                     , Cmd.map GotReportPanelMsg cmd
+                    , Nothing
                     )
                 )
                 model
@@ -430,13 +447,13 @@ updateDataWithCmd f model =
     case model.data of
         Loaded data ->
             let
-                ( data_, cmd ) =
+                ( data_, cmd, maybeRoute ) =
                     f data
             in
-            ( { model | data = Loaded data_ }, cmd )
+            ( { model | data = Loaded data_ }, cmd, maybeRoute )
 
         _ ->
-            ( model, Cmd.none )
+            ( model, Cmd.none, Nothing )
 
 
 updatePopulationDialog f model =
@@ -461,12 +478,13 @@ updateAssocLibraryDialog f model =
     in
     ( { model | assocLibraryDialog = assocLibraryDialog }
     , Cmd.map GotAssocLibraryDialogMsg cmd
+    , Nothing
     )
 
 
 {-| Returns a loaded model with freshly initialized Sidebar and ReportPanel.
 -}
-loaded : Measure -> Model -> ( Model, Cmd Msg )
+loaded : Measure -> Model -> ( Model, Cmd Msg, Maybe Route )
 loaded measure model =
     let
         base =
@@ -505,6 +523,7 @@ loaded measure model =
         [ Cmd.map GotSidebarMsg sidebarCmd
         , Cmd.map GotReportPanelMsg reportPanelCmd
         ]
+    , Nothing
     )
 
 

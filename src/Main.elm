@@ -1,7 +1,6 @@
 module Main exposing (Msg(..), main, update, view)
 
 import Browser exposing (Document)
-import Browser.Navigation as Nav
 import Json.Decode as Decode exposing (Decoder, decodeString, decodeValue, succeed)
 import Json.Decode.Pipeline exposing (optional)
 import Json.Encode exposing (Value)
@@ -19,7 +18,6 @@ import Route exposing (Route)
 import Session exposing (Session)
 import Task
 import Time
-import Url exposing (Url)
 
 
 
@@ -48,37 +46,39 @@ type alias Flags =
     { session : Session }
 
 
-init : Value -> Url -> Nav.Key -> ( Model, Cmd Msg )
-init flagsValue url navKey =
+init : Value -> ( Model, Cmd Msg )
+init flagsValue =
     let
         flags =
-            decodeValue (flagsDecoder navKey) flagsValue
-                |> Result.withDefault (defaultFlags navKey)
+            decodeValue flagsDecoder flagsValue
+                |> Result.withDefault defaultFlags
 
-        ( model, cmd ) =
-            changeRouteTo (Route.fromUrl url)
-                { drawerOpen = False
-                , page = Redirect flags.session
-                }
+        ( subModel, subCmd ) =
+            MeasureList.init flags.session
     in
-    ( model, Cmd.batch [ cmd, Task.perform GotTimeZone Time.here ] )
+    ( { drawerOpen = True, page = MeasureList subModel }
+    , Cmd.batch
+        [ Cmd.map GotMeasureListMsg subCmd
+        , Task.perform GotTimeZone Time.here
+        ]
+    )
 
 
-flagsDecoder : Nav.Key -> Decoder Flags
-flagsDecoder navKey =
+flagsDecoder : Decoder Flags
+flagsDecoder =
     let
         sessionDecoder =
             Decode.string
-                |> Decode.map (decodeString (Session.decoder navKey))
-                |> Decode.map (Result.withDefault (Session.default navKey))
+                |> Decode.map (decodeString Session.decoder)
+                |> Decode.map (Result.withDefault Session.default)
     in
     succeed Flags
-        |> optional "session" sessionDecoder (Session.default navKey)
+        |> optional "session" sessionDecoder Session.default
 
 
-defaultFlags : Nav.Key -> Flags
-defaultFlags navKey =
-    { session = Session.default navKey }
+defaultFlags : Flags
+defaultFlags =
+    { session = Session.default }
 
 
 
@@ -86,9 +86,7 @@ defaultFlags navKey =
 
 
 type Msg
-    = ChangedUrl Url
-    | ClickedLink Browser.UrlRequest
-    | ClickedNavIcon
+    = ClickedNavIcon
     | ClickedNavItem Page.NavItem
     | ClosedDrawer
     | GotTimeZone Time.Zone
@@ -104,43 +102,11 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case ( msg, model.page ) of
-        ( ChangedUrl url, _ ) ->
-            changeRouteTo (Route.fromUrl url) model
-
-        ( ClickedLink urlRequest, _ ) ->
-            case urlRequest of
-                Browser.Internal url ->
-                    case url.fragment of
-                        Nothing ->
-                            -- If we got a link that didn't include a fragment,
-                            -- it's from one of those (href "") attributes that
-                            -- we have to include to make the RealWorld CSS work.
-                            --
-                            -- In an application doing path routing instead of
-                            -- fragment-based routing, this entire
-                            -- `case url.fragment of` expression this comment
-                            -- is inside would be unnecessary.
-                            ( model, Cmd.none )
-
-                        Just _ ->
-                            ( model
-                            , Nav.pushUrl
-                                (Session.toNavKey (toSession model.page))
-                                (Url.toString url)
-                            )
-
-                Browser.External href ->
-                    ( model
-                    , Nav.load href
-                    )
-
         ( ClickedNavIcon, _ ) ->
             ( { model | drawerOpen = True }, Cmd.none )
 
         ( ClickedNavItem navItem, _ ) ->
-            ( { model | drawerOpen = False }
-            , Route.pushUrl (Session.toNavKey (toSession model.page)) (toRoute navItem)
-            )
+            changeRoute (toSession model.page) (toRoute navItem) model
 
         ( ClosedDrawer, _ ) ->
             ( { model | drawerOpen = False }, Cmd.none )
@@ -252,45 +218,6 @@ updateSession f model =
             { model | page = Help (Help.updateSession f help) }
 
 
-changeRouteTo : Maybe Route -> Model -> ( Model, Cmd Msg )
-changeRouteTo maybeRoute model =
-    let
-        session =
-            toSession model.page
-    in
-    case maybeRoute of
-        Nothing ->
-            ( { model | page = NotFound session }, Cmd.none )
-
-        Just Route.LibraryList ->
-            LibraryList.init session
-                |> updateWith LibraryList GotLibraryListMsg model
-
-        Just (Route.Library id) ->
-            Library.init session id
-                |> updateWith Library GotLibraryMsg model
-
-        Just Route.MeasureList ->
-            MeasureList.init session
-                |> updateWith MeasureList GotMeasureListMsg model
-
-        Just (Route.Measure id) ->
-            Measure.init session id
-                |> updateWith Measure GotMeasureMsg model
-
-        Just (Route.MeasureReport id) ->
-            MeasureReport.init session id
-                |> updateWith MeasureReport GotMeasureReportMsg model
-
-        Just Route.Settings ->
-            Settings.init session
-                |> updateWith Settings GotSettingsMsg model
-
-        Just Route.Help ->
-            Help.init session
-                |> updateWith Help GotHelpMsg model
-
-
 toRoute : Page.NavItem -> Route
 toRoute navItem =
     case navItem of
@@ -307,16 +234,88 @@ toRoute navItem =
             Route.Help
 
 
+changeRoute : Session -> Route -> Model -> ( Model, Cmd Msg )
+changeRoute session route model =
+    case route of
+        Route.LibraryList ->
+            let
+                ( routeModel, routeCmd ) =
+                    LibraryList.init session
+            in
+            ( { model | page = LibraryList routeModel }
+            , Cmd.map GotLibraryListMsg routeCmd
+            )
+
+        Route.Library id ->
+            let
+                ( routeModel, routeCmd ) =
+                    Library.init session id
+            in
+            ( { model | page = Library routeModel }
+            , Cmd.map GotLibraryMsg routeCmd
+            )
+
+        Route.MeasureList ->
+            let
+                ( routeModel, routeCmd ) =
+                    MeasureList.init session
+            in
+            ( { model | page = MeasureList routeModel }
+            , Cmd.map GotMeasureListMsg routeCmd
+            )
+
+        Route.Measure id ->
+            let
+                ( routeModel, routeCmd ) =
+                    Measure.init session id
+            in
+            ( { model | page = Measure routeModel }
+            , Cmd.map GotMeasureMsg routeCmd
+            )
+
+        Route.MeasureReport id ->
+            let
+                ( routeModel, routeCmd ) =
+                    MeasureReport.init session id
+            in
+            ( { model | page = MeasureReport routeModel }
+            , Cmd.map GotMeasureReportMsg routeCmd
+            )
+
+        Route.Settings ->
+            let
+                ( routeModel, routeCmd ) =
+                    Settings.init session
+            in
+            ( { model | page = Settings routeModel }
+            , Cmd.map GotSettingsMsg routeCmd
+            )
+
+        Route.Help ->
+            let
+                ( routeModel, routeCmd ) =
+                    Help.init session
+            in
+            ( { model | page = Help routeModel }
+            , Cmd.map GotHelpMsg routeCmd
+            )
+
+
 updateWith :
     (subModel -> Page)
     -> (subMsg -> Msg)
     -> Model
-    -> ( subModel, Cmd subMsg )
+    -> ( subModel, Cmd subMsg, Maybe Route )
     -> ( Model, Cmd Msg )
-updateWith toModel toMsg model ( subModel, subCmd ) =
-    ( { model | page = toModel subModel }
-    , Cmd.map toMsg subCmd
-    )
+updateWith toModel toMsg model ( subModel, subCmd, maybeRoute ) =
+    case maybeRoute of
+        Just route ->
+            changeRoute (toSession <| toModel subModel) route model
+
+        Nothing ->
+            ( { model | page = toModel subModel }
+            , Cmd.map toMsg subCmd
+            )
 
 
 
@@ -407,10 +406,8 @@ view model =
 
 main : Program Value Model Msg
 main =
-    Browser.application
+    Browser.document
         { init = init
-        , onUrlChange = ChangedUrl
-        , onUrlRequest = ClickedLink
         , subscriptions = subscriptions
         , update = update
         , view = view

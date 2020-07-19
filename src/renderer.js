@@ -2,7 +2,7 @@
 
 require("./styles.scss");
 
-const {Elm} = require('./Main');
+const {Elm} = require('./Main.elm');
 var app = Elm.Main.init({flags: {session: localStorage.session || null}});
 
 app.ports.storeSession.subscribe(function (session) {

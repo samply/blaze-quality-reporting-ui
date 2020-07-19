@@ -5,12 +5,12 @@ import Component.Sidebar.Entry as SidebarEntry exposing (SidebarEntry)
 import Fhir.Bundle exposing (Bundle)
 import Fhir.Http as FhirHttp
 import Fhir.Library as Library exposing (Library)
-import Fhir.PrimitiveTypes exposing (Canonical)
-import Html exposing (Html, a, text)
+import Fhir.PrimitiveTypes exposing (Canonical, Id)
+import Html exposing (Html, text)
 import Html.Attributes exposing (class)
 import Json.Decode exposing (decodeValue)
 import Loading exposing (Status(..))
-import Route exposing (href)
+import Route exposing (Route)
 import Url.Builder as UrlBuilder
 
 
@@ -39,26 +39,32 @@ init base url =
 
 
 type Msg
-    = CompletedSearch (Result FhirHttp.Error Bundle)
+    = ClickedLibrary Id
+    | CompletedSearch (Result FhirHttp.Error Bundle)
     | PassedSlowLoadingThreshold
 
 
-update : Msg -> Model -> Model
+update : Msg -> Model -> ( Model, Maybe Route )
 update msg model =
     case msg of
+        ClickedLibrary id ->
+            ( model, Just (Route.Library id) )
+
         CompletedSearch (Ok bundle) ->
             case decodeLibraries bundle of
                 [ onlyLibrary ] ->
-                    { model | library = Loaded onlyLibrary }
+                    ( { model | library = Loaded onlyLibrary }, Nothing )
 
                 _ ->
-                    model
+                    ( model, Nothing )
 
         CompletedSearch (Err error) ->
-            { model | library = Failed error }
+            ( { model | library = Failed error }, Nothing )
 
         PassedSlowLoadingThreshold ->
-            { model | library = Loading.markLoadingSlowly model.library }
+            ( { model | library = Loading.markLoadingSlowly model.library }
+            , Nothing
+            )
 
 
 searchLibrary base url =
@@ -86,11 +92,13 @@ decodeLibraries { entry } =
 
 
 type alias Config msg =
-    { onEdit : msg }
+    { onMsg : Msg -> msg
+    , onEdit : msg
+    }
 
 
 view : Config msg -> Model -> SidebarEntry msg
-view { onEdit } model =
+view { onMsg, onEdit } model =
     SidebarEntry.view SidebarEntry.config
         [ SidebarEntry.title []
             [ text "Library"
@@ -98,12 +106,12 @@ view { onEdit } model =
                 (Button.config |> Button.setOnClick onEdit)
             ]
         , SidebarEntry.content [ class "truncate" ]
-            [ libraryLink model ]
+            [ libraryLink onMsg model ]
         ]
 
 
-libraryLink : Model -> Html msg
-libraryLink model =
+libraryLink : (Msg -> msg) -> Model -> Html msg
+libraryLink onMsg model =
     case model.url of
         Just url ->
             case model.library of
@@ -111,16 +119,25 @@ libraryLink model =
                     text url
 
                 Loaded library ->
-                    a [ href (Route.Library library.id) ]
-                        [ text <| libraryTitle library ]
+                    Button.text
+                        (Button.config
+                            |> Button.setOnClick (onMsg (ClickedLibrary library.id))
+                        )
+                        (libraryTitle library)
 
                 Reloading library ->
-                    a [ href (Route.Library library.id) ]
-                        [ text <| libraryTitle library ]
+                    Button.text
+                        (Button.config
+                            |> Button.setOnClick (onMsg (ClickedLibrary library.id))
+                        )
+                        (libraryTitle library)
 
                 ReloadingSlowly library ->
-                    a [ href (Route.Library library.id) ]
-                        [ text <| libraryTitle library ]
+                    Button.text
+                        (Button.config
+                            |> Button.setOnClick (onMsg (ClickedLibrary library.id))
+                        )
+                        (libraryTitle library)
 
                 _ ->
                     Html.span [ class "invisible" ] [ text url ]

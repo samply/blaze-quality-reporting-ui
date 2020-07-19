@@ -30,7 +30,7 @@ import Loading exposing (Status(..))
 import Page.Library.List.Header as Header
 import Page.Library.List.Query exposing (Query)
 import Page.Library.List.Sort as Sort exposing (Sort)
-import Route
+import Route exposing (Route)
 import Session exposing (Session)
 import String.Extra
 import Task
@@ -136,14 +136,14 @@ type Msg
     | GotHeaderSortSelect Sort
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
+update : Msg -> Model -> ( Model, Cmd Msg, Maybe Route )
 update msg model =
     case msg of
         ClickedLibrary library ->
-            ( model, pushLibraryUrl model library.id )
+            ( model, Cmd.none, Just (Route.Library library.id) )
 
         ClickedCreateLibrary ->
-            ( model, createLibrary (Session.getBase model.session) )
+            ( model, createLibrary (Session.getBase model.session), Nothing )
 
         ClickedStatus status ->
             updateQuery (setQueryStatus status) model
@@ -154,6 +154,7 @@ update msg model =
                 |> Loading.andThen .firstUrl
                 |> Maybe.map (loadPage CompletedLoadingInitialLibraryPage)
                 |> Maybe.withDefault Cmd.none
+            , Nothing
             )
 
         ClickedNext oldPageNum ->
@@ -162,6 +163,7 @@ update msg model =
                 |> Loading.andThen .nextUrl
                 |> Maybe.map (loadPage (CompletedLoadingNextLibraryPage oldPageNum))
                 |> Maybe.withDefault Cmd.none
+            , Nothing
             )
 
         SearchLibraries title ->
@@ -170,27 +172,31 @@ update msg model =
         Hit Slash ->
             ( model
             , Task.attempt SearchFieldFocused (Dom.focus "search-field")
+            , Nothing
             )
 
         Hit Esc ->
             ( model
             , Task.attempt SearchFieldBlurred (Dom.blur "search-field")
+            , Nothing
             )
 
         SearchFieldFocused _ ->
-            ( { model | searchFieldFocused = True }, Cmd.none )
+            ( { model | searchFieldFocused = True }, Cmd.none, Nothing )
 
         SearchFieldBlurred _ ->
-            ( { model | searchFieldFocused = False }, Cmd.none )
+            ( { model | searchFieldFocused = False }, Cmd.none, Nothing )
 
         CompletedLoadingInitialLibraryPage (Ok bundle) ->
             ( { model | libraryPage = Loaded (decodeInitialLibraryPage bundle) }
             , Cmd.none
+            , Nothing
             )
 
         CompletedLoadingInitialLibraryPage (Err error) ->
             ( { model | libraryPage = Failed error }
             , Cmd.none
+            , Nothing
             )
 
         CompletedLoadingNextLibraryPage oldPageNum (Ok bundle) ->
@@ -203,11 +209,13 @@ update msg model =
             in
             ( { model | libraryPage = Loaded page }
             , Cmd.none
+            , Nothing
             )
 
         CompletedLoadingNextLibraryPage _ (Err error) ->
             ( { model | libraryPage = Failed error }
             , Cmd.none
+            , Nothing
             )
 
         PassedSlowLoadingThreshold ->
@@ -215,30 +223,34 @@ update msg model =
                 | libraryPage = Loading.markLoadingSlowly model.libraryPage
               }
             , Cmd.none
+            , Nothing
             )
 
         CompletedCreatingLibrary (Ok library) ->
-            ( model, pushLibraryUrl model library.id )
+            ( model, Cmd.none, Just (Route.Library library.id) )
 
         CompletedCreatingLibrary (Err _) ->
-            ( model, Cmd.none )
+            ( model, Cmd.none, Nothing )
 
         GotCurrentTime currentTime ->
-            ( { model | currentTime = currentTime }, Cmd.none )
+            ( { model | currentTime = currentTime }, Cmd.none, Nothing )
 
         GotHeaderMsg headerMsg ->
             let
                 ( header, headerCmd ) =
                     Header.update headerMsg model.header
             in
-            ( { model | header = header }, headerCmd |> Cmd.map GotHeaderMsg )
+            ( { model | header = header }
+            , headerCmd |> Cmd.map GotHeaderMsg
+            , Nothing
+            )
 
         GotHeaderSortSelect sort ->
             { model | header = Header.closeSortDropdown model.header }
                 |> updateQuery (setQuerySort sort)
 
 
-updateQuery : (Query -> Query) -> Model -> ( Model, Cmd Msg )
+updateQuery : (Query -> Query) -> Model -> ( Model, Cmd Msg, Maybe Route )
 updateQuery f model =
     let
         newQuery =
@@ -256,11 +268,8 @@ updateQuery f model =
         [ searchLibraries (Session.getBase model.session) newQuery
         , headerCmd |> Cmd.map GotHeaderMsg
         ]
+    , Nothing
     )
-
-
-pushLibraryUrl model id =
-    Route.pushUrl (Session.toNavKey model.session) (Route.Library id)
 
 
 searchLibraries : String -> Query -> Cmd Msg

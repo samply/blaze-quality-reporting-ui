@@ -8,6 +8,7 @@ import Component.Sidebar.VersionPanel as VersionPanel
 import Fhir.Measure as Measure exposing (Measure)
 import Html exposing (Html)
 import Page.Measure.Sidebar.LibraryPanel as LibraryPanel
+import Route exposing (Route)
 import Session exposing (Server)
 import Url.Builder as UrlBuilder
 
@@ -58,7 +59,7 @@ type Msg
     | GotLibraryMsg LibraryPanel.Msg
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
+update : Msg -> Model -> ( Model, Cmd Msg, Maybe Route )
 update msg model =
     case msg of
         GotShareMsg msg_ ->
@@ -66,32 +67,49 @@ update msg model =
                 ( share, cmd ) =
                     SharePanel.update msg_ model.sharePanel
             in
-            ( { model | sharePanel = share }, Cmd.map GotShareMsg cmd )
+            ( { model | sharePanel = share }
+            , Cmd.map GotShareMsg cmd
+            , Nothing
+            )
 
         GotUrlMsg msg_ ->
             let
                 ( url, cmd ) =
                     UrlPanel.update msg_ model.urlPanel
             in
-            ( { model | urlPanel = url }, Cmd.map GotUrlMsg cmd )
+            ( { model | urlPanel = url }
+            , Cmd.map GotUrlMsg cmd
+            , Nothing
+            )
 
         GotVersionMsg msg_ ->
             let
                 ( version, cmd ) =
                     VersionPanel.update msg_ model.versionPanel
             in
-            ( { model | versionPanel = version }, Cmd.map GotVersionMsg cmd )
+            ( { model | versionPanel = version }
+            , Cmd.map GotVersionMsg cmd
+            , Nothing
+            )
 
         GotSubjectMsg msg_ ->
             let
                 ( subject, cmd ) =
                     SubjectPanel.update msg_ model.subjectPanel
             in
-            ( { model | subjectPanel = subject }, Cmd.map GotSubjectMsg cmd )
+            ( { model | subjectPanel = subject }
+            , Cmd.map GotSubjectMsg cmd
+            , Nothing
+            )
 
-        GotLibraryMsg msg_ ->
-            ( { model | libraryPanel = LibraryPanel.update msg_ model.libraryPanel }
+        GotLibraryMsg panelMsg ->
+            let
+                ( panel, maybeRoute ) =
+                    LibraryPanel.update panelMsg model.libraryPanel
+            in
+            ( { model | libraryPanel = panel }
             , Cmd.none
+            , maybeRoute
             )
 
 
@@ -152,5 +170,9 @@ viewSubjectPanel { onMsg, onSave } { measure, subjectPanel } =
         subjectPanel
 
 
-viewLibraryPanel { onLibraryEdit } { libraryPanel } =
-    LibraryPanel.view { onEdit = onLibraryEdit } libraryPanel
+viewLibraryPanel { onMsg, onLibraryEdit } { libraryPanel } =
+    LibraryPanel.view
+        { onMsg = GotLibraryMsg >> onMsg
+        , onEdit = onLibraryEdit
+        }
+        libraryPanel

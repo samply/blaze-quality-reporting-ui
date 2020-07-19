@@ -3,21 +3,77 @@
     "name": "blaze-quality-reporting-ui",
     "version": "0.7.2",
     "description": "Experimental FHIR Quality Reporting Authoring UI",
-    "main": "index.js",
+    "main": ".webpack/main",
     "scripts": {
-        "test": "elm-test",
-        "start": "npm run dev",
-        "dev": "webpack-dev-server --hot --colors --port 3000",
-        "build": "webpack",
-        "prod": "webpack -p",
-        "analyse": "elm-analyse -s -p 3001 -o"
+        "start": "electron-forge start",
+        "package": "electron-forge package",
+        "make": "electron-forge make",
+        "publish": "electron-forge publish",
+        "lint": "echo \"No linting configured\""
     },
     "repository": {
         "type": "git",
         "url": "git+https://github.com/samply/blaze-quality-reporting-ui.git"
     },
-    "license": "MIT",
+    "license": "Apache-2.0",
+    "config": {
+        "forge": {
+            "packagerConfig": {},
+            "makers": [
+                {
+                    "name": "@electron-forge/maker-squirrel",
+                    "config": {}
+                },
+                {
+                    "name": "@electron-forge/maker-zip",
+                    "platforms": [
+                        "darwin",
+                        "win32"
+                    ]
+                },
+                {
+                    "name": "@electron-forge/maker-deb",
+                    "config": {}
+                },
+                {
+                    "name": "@electron-forge/maker-rpm",
+                    "config": {}
+                },
+                {
+                    "name": "@electron-forge/maker-dmg",
+                    "config": {
+                        "format": "ULFO"
+                    }
+                }
+            ],
+            "plugins": [
+                [
+                    "@electron-forge/plugin-webpack",
+                    {
+                        "mainConfig": "./webpack.main.config.js",
+                        "renderer": {
+                            "config": "./webpack.renderer.config.js",
+                            "entryPoints": [
+                                {
+                                    "html": "./src/index.html",
+                                    "js": "./src/renderer.js",
+                                    "name": "main_window"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            ]
+        }
+    },
     "devDependencies": {
+        "@electron-forge/cli": "6.0.0-beta.52",
+        "@electron-forge/maker-deb": "6.0.0-beta.52",
+        "@electron-forge/maker-rpm": "6.0.0-beta.52",
+        "@electron-forge/maker-squirrel": "6.0.0-beta.52",
+        "@electron-forge/maker-zip": "6.0.0-beta.52",
+        "@electron-forge/plugin-webpack": "6.0.0-beta.52",
+        "@marshallofsound/webpack-asset-relocator-loader": "^0.5.0",
         "@babel/core": "^7.9.6",
         "@babel/preset-env": "^7.9.6",
         "@fullhuman/postcss-purgecss": "^2.3.0",
@@ -26,6 +82,7 @@
         "closure-webpack-plugin": "^2.3.0",
         "copy-webpack-plugin": "^5.1.1",
         "css-loader": "^3.5.3",
+        "electron": "^9.1.0",
         "elm": "^0.19.1-2",
         "elm-analyse": "^0.16.5",
         "elm-hot-webpack-loader": "^1.1.6",
@@ -35,6 +92,7 @@
         "google-closure-compiler": "^20200406.0.0",
         "html-webpack-plugin": "^4.2.0",
         "mini-css-extract-plugin": "^0.9.0",
+        "node-loader": "^0.6.0",
         "node-sass": "^4.14.1",
         "optimize-css-assets-webpack-plugin": "^5.0.3",
         "postcss-loader": "^3.0.0",
@@ -49,6 +107,9 @@
         "webpack-merge": "^4.2.2"
     },
     "dependencies": {
+        "@electron-forge/maker-dmg": "^6.0.0-beta.52",
+        "@electron-forge/maker-wix": "^6.0.0-beta.52",
+        "electron-squirrel-startup": "^1.0.0",
         "postcss-cli": "^7.1.1",
         "purecss": "^1.0.1",
         "tailwindcss": "^1.4.6"
