@@ -82,7 +82,7 @@ drawer config =
                     |> ListItem.setOnClick (config.onNavItemClick Measures)
                 )
                 "measures"
-                [ ListItem.graphic [] [ Icon.icon [] "calculate" ]
+                [ ListItem.graphic [] [ Icon.icon [] "assessment" ]
                 , text "Measures"
                 ]
             , ListItem.listItem

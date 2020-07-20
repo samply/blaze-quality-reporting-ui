@@ -1,5 +1,8 @@
 'use strict';
 
+import 'material-design-icons/iconfont/material-icons.css';
+import 'typeface-roboto/index.css';
+import 'typeface-roboto-mono/index.css';
 require("./styles.scss");
 
 const {Elm} = require('./Main.elm');

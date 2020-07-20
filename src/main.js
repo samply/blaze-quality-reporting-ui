@@ -1,4 +1,4 @@
-const {app, BrowserWindow} = require('electron');
+const {app, session, BrowserWindow} = require('electron');
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) { // eslint-disable-line global-require
@@ -6,6 +6,33 @@ if (require('electron-squirrel-startup')) { // eslint-disable-line global-requir
 }
 
 const createWindow = () => {
+    // Set CSP Header
+    const defaultCsp =
+        ['default-src \'none\'',
+            'script-src-elem \'self\'',
+            'font-src \'self\'',
+            'style-src-elem \'unsafe-inline\'',
+            'connect-src *'
+        ];
+
+    const csp = process.env.npm_lifecycle_event === "start"
+        ? [...defaultCsp, 'script-src  \'unsafe-eval\'']
+        : defaultCsp;
+
+    session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+        if (details.url.startsWith('devtools:')) {
+            callback({});
+        } else {
+            callback({
+                responseHeaders: {
+                    ...details.responseHeaders,
+                    'Content-Security-Policy': [csp.join(';')]
+
+                }
+            })
+        }
+    });
+
     // Create the browser window.
     const mainWindow = new BrowserWindow({
         width: 1024,
@@ -43,5 +70,10 @@ app.on('activate', () => {
     }
 });
 
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and import them here.
+// Disable navigation
+// https://www.electronjs.org/docs/tutorial/security#12-disable-or-limit-navigation
+app.on('web-contents-created', (event, contents) => {
+    contents.on('will-navigate', (event, navigationUrl) => {
+        event.preventDefault()
+    })
+})

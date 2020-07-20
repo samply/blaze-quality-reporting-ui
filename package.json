@@ -100,10 +100,14 @@
     "dependencies": {
         "@electron-forge/maker-dmg": "^6.0.0-beta.52",
         "@electron-forge/maker-wix": "^6.0.0-beta.52",
+        "@fortawesome/fontawesome-free": "^5.14.0",
         "electron-squirrel-startup": "^1.0.0",
+        "material-design-icons": "^3.0.1",
         "postcss-cli": "^7.1.1",
         "purecss": "^1.0.1",
-        "tailwindcss": "^1.4.6"
+        "tailwindcss": "^1.4.6",
+        "typeface-roboto": "0.0.75",
+        "typeface-roboto-mono": "0.0.75"
     },
     "prettier": {
         "tabWidth": 4
