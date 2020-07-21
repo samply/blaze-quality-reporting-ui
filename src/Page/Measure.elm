@@ -20,7 +20,7 @@ import Fhir.PrimitiveTypes exposing (Id)
 import Html exposing (Html, div, h3, text)
 import Html.Attributes exposing (class)
 import Http
-import List.Extra exposing (getAt, removeAt, setAt, updateAt)
+import List.Extra as ListExtra
 import List.Zipper as Zipper
 import Loading exposing (Status(..))
 import Maybe.Extra as MaybeExtra
@@ -92,6 +92,8 @@ type Msg
     | ClickedPopulationEdit Int Int
     | ClickedStratifierEdit Int Int
     | ClickedStratifierDelete Int Int
+    | ClickedStratifierMoveUp Int Int
+    | ClickedStratifierMoveDown Int Int
     | ClickedAddStratifier Int
     | ClickedLibraryAssoc
     | ClickedSidebarLibraryEdit
@@ -143,9 +145,9 @@ update msg model =
                     let
                         maybePopulation =
                             measure.group
-                                |> getAt groupIdx
+                                |> ListExtra.getAt groupIdx
                                 |> Maybe.map .population
-                                |> Maybe.andThen (getAt populationIdx)
+                                |> Maybe.andThen (ListExtra.getAt populationIdx)
                     in
                     case maybePopulation of
                         Just population ->
@@ -174,9 +176,9 @@ update msg model =
                     let
                         maybeStratifier =
                             measure.group
-                                |> getAt groupIdx
+                                |> ListExtra.getAt groupIdx
                                 |> Maybe.map .stratifier
-                                |> Maybe.andThen (getAt stratifierIdx)
+                                |> Maybe.andThen (ListExtra.getAt stratifierIdx)
                     in
                     case maybeStratifier of
                         Just stratifier ->
@@ -204,6 +206,28 @@ update msg model =
             , doWithData
                 (\{ measure } ->
                     updateGroup (deleteStratifier stratifierIdx) groupIdx measure
+                        |> saveMeasure (Session.getBase model.session) model.measureId
+                )
+                model
+            , Nothing
+            )
+
+        ClickedStratifierMoveUp groupIdx stratifierIdx ->
+            ( model
+            , doWithData
+                (\{ measure } ->
+                    updateGroup (moveStratifierUp stratifierIdx) groupIdx measure
+                        |> saveMeasure (Session.getBase model.session) model.measureId
+                )
+                model
+            , Nothing
+            )
+
+        ClickedStratifierMoveDown groupIdx stratifierIdx ->
+            ( model
+            , doWithData
+                (\{ measure } ->
+                    updateGroup (moveStratifierDown stratifierIdx) groupIdx measure
                         |> saveMeasure (Session.getBase model.session) model.measureId
                 )
                 model
@@ -411,7 +435,7 @@ doWithData f model =
 
 setPopulation : Int -> Measure.Population -> Measure.Group -> Measure.Group
 setPopulation idx population group =
-    { group | population = setAt idx population group.population }
+    { group | population = ListExtra.setAt idx population group.population }
 
 
 addStratifier : Measure.Stratifier -> Measure.Group -> Measure.Group
@@ -421,17 +445,55 @@ addStratifier stratifier group =
 
 setStratifier : Int -> Measure.Stratifier -> Measure.Group -> Measure.Group
 setStratifier idx stratifier group =
-    { group | stratifier = setAt idx stratifier group.stratifier }
+    { group | stratifier = ListExtra.setAt idx stratifier group.stratifier }
 
 
 deleteStratifier : Int -> Measure.Group -> Measure.Group
 deleteStratifier idx group =
-    { group | stratifier = removeAt idx group.stratifier }
+    { group | stratifier = ListExtra.removeAt idx group.stratifier }
+
+
+moveStratifierUp : Int -> Measure.Group -> Measure.Group
+moveStratifierUp idx group =
+    case
+        ( ListExtra.getAt idx group.stratifier
+        , ListExtra.getAt (idx - 1) group.stratifier
+        )
+    of
+        ( Just self, Just prev ) ->
+            { group
+                | stratifier =
+                    group.stratifier
+                        |> ListExtra.setAt (idx - 1) self
+                        |> ListExtra.setAt idx prev
+            }
+
+        _ ->
+            group
+
+
+moveStratifierDown : Int -> Measure.Group -> Measure.Group
+moveStratifierDown idx group =
+    case
+        ( ListExtra.getAt idx group.stratifier
+        , ListExtra.getAt (idx + 1) group.stratifier
+        )
+    of
+        ( Just self, Just next ) ->
+            { group
+                | stratifier =
+                    group.stratifier
+                        |> ListExtra.setAt (idx + 1) self
+                        |> ListExtra.setAt idx next
+            }
+
+        _ ->
+            group
 
 
 updateGroup : (Measure.Group -> Measure.Group) -> Int -> Measure -> Measure
 updateGroup f groupIdx measure =
-    { measure | group = updateAt groupIdx f measure.group }
+    { measure | group = ListExtra.updateAt groupIdx f measure.group }
 
 
 updateData f model =
@@ -710,11 +772,32 @@ viewStratifier groupIdx stratifierIdx { code, description, component } =
                     |> String.join ", "
     in
     ListItem.listItem
-        (ListItem.config
-            |> ListItem.setOnClick (ClickedStratifierEdit groupIdx stratifierIdx)
-        )
+        ListItem.config
         (String.fromInt stratifierIdx)
-        [ text title ]
+        [ text title
+        , ListItem.meta []
+            [ Button.icon
+                (Button.config
+                    |> Button.setOnClick (ClickedStratifierEdit groupIdx stratifierIdx)
+                )
+                "edit"
+            , Button.icon
+                (Button.config
+                    |> Button.setOnClick (ClickedStratifierMoveUp groupIdx stratifierIdx)
+                )
+                "arrow_upward"
+            , Button.icon
+                (Button.config
+                    |> Button.setOnClick (ClickedStratifierMoveDown groupIdx stratifierIdx)
+                )
+                "arrow_downward"
+            , Button.icon
+                (Button.config
+                    |> Button.setOnClick (ClickedStratifierDelete groupIdx stratifierIdx)
+                )
+                "delete"
+            ]
+        ]
 
 
 viewReportPanel reportPanel =
