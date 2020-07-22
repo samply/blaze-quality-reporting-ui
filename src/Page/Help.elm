@@ -10,6 +10,7 @@ module Page.Help exposing
 
 import Html exposing (Html, a, div, h2, li, text, ul)
 import Html.Attributes exposing (class, href)
+import Route exposing (Route)
 import Session exposing (Session)
 
 
@@ -46,9 +47,9 @@ type Msg
     = Msg
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
+update : Msg -> Model -> ( Model, Cmd Msg, Maybe Route )
 update _ model =
-    ( model, Cmd.none )
+    ( model, Cmd.none, Nothing )
 
 
 

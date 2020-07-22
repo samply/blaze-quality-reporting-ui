@@ -74,7 +74,7 @@ type alias Config msg =
 
 view : Config msg -> Model -> Html msg
 view { onMsg, onSave } { attachment, edit } =
-    Html.div [ class "" ]
+    Html.div []
         [ Html.div [ class "flex justify-between mb-4" ]
             [ Html.h2 [ class "text-lg" ]
                 [ text "CQL" ]
@@ -87,6 +87,7 @@ view { onMsg, onSave } { attachment, edit } =
                         |> TextArea.setValue (attachment |> Maybe.andThen .data)
                         |> TextArea.setRows (Just 20)
                         |> TextArea.setOnInput (EnteredData >> onMsg)
+                        |> TextArea.setAttributes [ class "text-sm" ]
                     )
                 , div [ class "text-right space-x-2" ]
                     [ Button.secondary

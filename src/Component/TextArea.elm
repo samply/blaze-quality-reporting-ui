@@ -139,6 +139,7 @@ outlined : Config msg -> Html msg
 outlined ({ valid, additionalAttributes } as config_) =
     Html.textarea
         ([ class "appearance-none px-2 py-1 rounded-md w-full bg-white border"
+         , class "font-mono"
          , if valid then
             class "border-gray-400 focus:border-blue-600"
 

@@ -20,7 +20,7 @@ import Fhir.PrimitiveTypes exposing (Id)
 import Html exposing (Html, div, h3, text)
 import Html.Attributes exposing (class)
 import Http
-import List.Extra exposing (getAt, removeAt, setAt, updateAt)
+import List.Extra as ListExtra
 import List.Zipper as Zipper
 import Loading exposing (Status(..))
 import Maybe.Extra as MaybeExtra
@@ -29,7 +29,7 @@ import Page.Measure.PopulationDialog as PopulationDialog
 import Page.Measure.ReportPanel as ReportPanel
 import Page.Measure.Sidebar as Sidebar
 import Page.Measure.StratifierDialog as StratifierDialog
-import Route
+import Route exposing (Route)
 import Session exposing (Server, Session)
 
 
@@ -92,6 +92,8 @@ type Msg
     | ClickedPopulationEdit Int Int
     | ClickedStratifierEdit Int Int
     | ClickedStratifierDelete Int Int
+    | ClickedStratifierMoveUp Int Int
+    | ClickedStratifierMoveDown Int Int
     | ClickedAddStratifier Int
     | ClickedLibraryAssoc
     | ClickedSidebarLibraryEdit
@@ -114,7 +116,7 @@ type Msg
     | GotReportPanelMsg ReportPanel.Msg
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
+update : Msg -> Model -> ( Model, Cmd Msg, Maybe Route )
 update msg model =
     case msg of
         ClickedHeaderSave title description ->
@@ -128,11 +130,13 @@ update msg model =
                         |> saveMeasure (Session.getBase model.session) model.measureId
                 )
                 model
+            , Nothing
             )
 
         ClickedHeaderDelete ->
             ( model
             , deleteMeasure (Session.getBase model.session) model.measureId
+            , Nothing
             )
 
         ClickedPopulationEdit groupIdx populationIdx ->
@@ -141,9 +145,9 @@ update msg model =
                     let
                         maybePopulation =
                             measure.group
-                                |> getAt groupIdx
+                                |> ListExtra.getAt groupIdx
                                 |> Maybe.map .population
-                                |> Maybe.andThen (getAt populationIdx)
+                                |> Maybe.andThen (ListExtra.getAt populationIdx)
                     in
                     case maybePopulation of
                         Just population ->
@@ -163,6 +167,7 @@ update msg model =
                 _ ->
                     model
             , Cmd.none
+            , Nothing
             )
 
         ClickedStratifierEdit groupIdx stratifierIdx ->
@@ -171,9 +176,9 @@ update msg model =
                     let
                         maybeStratifier =
                             measure.group
-                                |> getAt groupIdx
+                                |> ListExtra.getAt groupIdx
                                 |> Maybe.map .stratifier
-                                |> Maybe.andThen (getAt stratifierIdx)
+                                |> Maybe.andThen (ListExtra.getAt stratifierIdx)
                     in
                     case maybeStratifier of
                         Just stratifier ->
@@ -193,6 +198,7 @@ update msg model =
                 _ ->
                     model
             , Cmd.none
+            , Nothing
             )
 
         ClickedStratifierDelete groupIdx stratifierIdx ->
@@ -203,6 +209,29 @@ update msg model =
                         |> saveMeasure (Session.getBase model.session) model.measureId
                 )
                 model
+            , Nothing
+            )
+
+        ClickedStratifierMoveUp groupIdx stratifierIdx ->
+            ( model
+            , doWithData
+                (\{ measure } ->
+                    updateGroup (moveStratifierUp stratifierIdx) groupIdx measure
+                        |> saveMeasure (Session.getBase model.session) model.measureId
+                )
+                model
+            , Nothing
+            )
+
+        ClickedStratifierMoveDown groupIdx stratifierIdx ->
+            ( model
+            , doWithData
+                (\{ measure } ->
+                    updateGroup (moveStratifierDown stratifierIdx) groupIdx measure
+                        |> saveMeasure (Session.getBase model.session) model.measureId
+                )
+                model
+            , Nothing
             )
 
         ClickedAddStratifier groupIdx ->
@@ -215,6 +244,7 @@ update msg model =
                             |> Just
                 }
             , Cmd.none
+            , Nothing
             )
 
         ClickedLibraryAssoc ->
@@ -226,6 +256,7 @@ update msg model =
         ClickedSidebarSave measure ->
             ( model
             , saveMeasure (Session.getBase model.session) model.measureId measure
+            , Nothing
             )
 
         ClickedSidebarCopyToServer server ->
@@ -236,6 +267,7 @@ update msg model =
 
                 _ ->
                     Cmd.none
+            , Nothing
             )
 
         ClickedPopulationSaveAtUpdate groupIdx populationIdx population ->
@@ -248,6 +280,7 @@ update msg model =
                         |> saveMeasure (Session.getBase model.session) model.measureId
                 )
                 model
+            , Nothing
             )
 
         ClickedStratifierSaveAtAdd groupIdx stratifier ->
@@ -260,6 +293,7 @@ update msg model =
                         |> saveMeasure (Session.getBase model.session) model.measureId
                 )
                 model
+            , Nothing
             )
 
         ClickedStratifierSaveAtUpdate groupIdx stratifierIdx stratifier ->
@@ -272,13 +306,11 @@ update msg model =
                         |> saveMeasure (Session.getBase model.session) model.measureId
                 )
                 model
+            , Nothing
             )
 
         ClickedReport id ->
-            ( model
-            , Route.pushUrl (Session.toNavKey model.session)
-                (Route.MeasureReport id)
-            )
+            ( model, Cmd.none, Just (Route.MeasureReport id) )
 
         SelectedLibrary library ->
             ( model
@@ -288,6 +320,7 @@ update msg model =
                         |> saveMeasure (Session.getBase model.session) model.measureId
                 )
                 model
+            , Nothing
             )
 
         CompletedLoadMeasure (Ok measure) ->
@@ -296,11 +329,12 @@ update msg model =
         CompletedLoadMeasure (Err error) ->
             ( { model | data = Failed error }
             , Cmd.none
+            , Nothing
             )
 
         CompletedSaveMeasure (Ok measure) ->
             let
-                ( newModel, cmd ) =
+                ( newModel, cmd, maybeRoute ) =
                     loaded measure model
             in
             ( newModel
@@ -308,14 +342,15 @@ update msg model =
                 |> updateStratifierDialog StratifierDialog.doClose
                 |> closeAssocLibraryDialog
             , cmd
+            , maybeRoute
             )
 
         CompletedSaveMeasure (Err _) ->
-            ( model, Cmd.none )
+            ( model, Cmd.none, Nothing )
 
         CompletedDuplicateMeasure (Ok measure) ->
             let
-                ( newModel, cmd ) =
+                ( newModel, cmd, maybeRoute ) =
                     loaded measure model
             in
             ( newModel
@@ -323,27 +358,31 @@ update msg model =
                 |> updateStratifierDialog StratifierDialog.doClose
                 |> closeAssocLibraryDialog
             , cmd
+            , maybeRoute
             )
 
         CompletedDuplicateMeasure (Err _) ->
-            ( model, Cmd.none )
+            ( model, Cmd.none, Nothing )
 
         CompletedDeleteMeasure (Ok _) ->
             ( model
-            , Route.pushUrl (Session.toNavKey model.session) Route.MeasureList
+            , Cmd.none
+            , Just Route.MeasureList
             )
 
         CompletedDeleteMeasure (Err _) ->
-            ( model, Cmd.none )
+            ( model, Cmd.none, Nothing )
 
         GotPopulationDialogMsg msg_ ->
             ( updatePopulationDialog (PopulationDialog.update msg_) model
             , Cmd.none
+            , Nothing
             )
 
         GotStratifierDialogMsg msg_ ->
             ( updateStratifierDialog (StratifierDialog.update msg_) model
             , Cmd.none
+            , Nothing
             )
 
         GotAssocLibraryDialogMsg msg_ ->
@@ -354,17 +393,18 @@ update msg model =
                 updateHeader f =
                     updateData (\data -> { data | header = f data.header })
             in
-            ( updateHeader (Header.update msg_) model, Cmd.none )
+            ( updateHeader (Header.update msg_) model, Cmd.none, Nothing )
 
         GotSidebarMsg msg_ ->
             updateDataWithCmd
                 (\data ->
                     let
-                        ( sidebar, cmd ) =
+                        ( sidebar, cmd, maybeRoute ) =
                             Sidebar.update msg_ data.sidebar
                     in
                     ( { data | sidebar = sidebar }
                     , Cmd.map GotSidebarMsg cmd
+                    , maybeRoute
                     )
                 )
                 model
@@ -378,6 +418,7 @@ update msg model =
                     in
                     ( { data | reportPanel = reportPanel }
                     , Cmd.map GotReportPanelMsg cmd
+                    , Nothing
                     )
                 )
                 model
@@ -394,7 +435,7 @@ doWithData f model =
 
 setPopulation : Int -> Measure.Population -> Measure.Group -> Measure.Group
 setPopulation idx population group =
-    { group | population = setAt idx population group.population }
+    { group | population = ListExtra.setAt idx population group.population }
 
 
 addStratifier : Measure.Stratifier -> Measure.Group -> Measure.Group
@@ -404,17 +445,55 @@ addStratifier stratifier group =
 
 setStratifier : Int -> Measure.Stratifier -> Measure.Group -> Measure.Group
 setStratifier idx stratifier group =
-    { group | stratifier = setAt idx stratifier group.stratifier }
+    { group | stratifier = ListExtra.setAt idx stratifier group.stratifier }
 
 
 deleteStratifier : Int -> Measure.Group -> Measure.Group
 deleteStratifier idx group =
-    { group | stratifier = removeAt idx group.stratifier }
+    { group | stratifier = ListExtra.removeAt idx group.stratifier }
+
+
+moveStratifierUp : Int -> Measure.Group -> Measure.Group
+moveStratifierUp idx group =
+    case
+        ( ListExtra.getAt idx group.stratifier
+        , ListExtra.getAt (idx - 1) group.stratifier
+        )
+    of
+        ( Just self, Just prev ) ->
+            { group
+                | stratifier =
+                    group.stratifier
+                        |> ListExtra.setAt (idx - 1) self
+                        |> ListExtra.setAt idx prev
+            }
+
+        _ ->
+            group
+
+
+moveStratifierDown : Int -> Measure.Group -> Measure.Group
+moveStratifierDown idx group =
+    case
+        ( ListExtra.getAt idx group.stratifier
+        , ListExtra.getAt (idx + 1) group.stratifier
+        )
+    of
+        ( Just self, Just next ) ->
+            { group
+                | stratifier =
+                    group.stratifier
+                        |> ListExtra.setAt (idx + 1) self
+                        |> ListExtra.setAt idx next
+            }
+
+        _ ->
+            group
 
 
 updateGroup : (Measure.Group -> Measure.Group) -> Int -> Measure -> Measure
 updateGroup f groupIdx measure =
-    { measure | group = updateAt groupIdx f measure.group }
+    { measure | group = ListExtra.updateAt groupIdx f measure.group }
 
 
 updateData f model =
@@ -430,13 +509,13 @@ updateDataWithCmd f model =
     case model.data of
         Loaded data ->
             let
-                ( data_, cmd ) =
+                ( data_, cmd, maybeRoute ) =
                     f data
             in
-            ( { model | data = Loaded data_ }, cmd )
+            ( { model | data = Loaded data_ }, cmd, maybeRoute )
 
         _ ->
-            ( model, Cmd.none )
+            ( model, Cmd.none, Nothing )
 
 
 updatePopulationDialog f model =
@@ -461,12 +540,13 @@ updateAssocLibraryDialog f model =
     in
     ( { model | assocLibraryDialog = assocLibraryDialog }
     , Cmd.map GotAssocLibraryDialogMsg cmd
+    , Nothing
     )
 
 
 {-| Returns a loaded model with freshly initialized Sidebar and ReportPanel.
 -}
-loaded : Measure -> Model -> ( Model, Cmd Msg )
+loaded : Measure -> Model -> ( Model, Cmd Msg, Maybe Route )
 loaded measure model =
     let
         base =
@@ -505,6 +585,7 @@ loaded measure model =
         [ Cmd.map GotSidebarMsg sidebarCmd
         , Cmd.map GotReportPanelMsg reportPanelCmd
         ]
+    , Nothing
     )
 
 
@@ -691,11 +772,32 @@ viewStratifier groupIdx stratifierIdx { code, description, component } =
                     |> String.join ", "
     in
     ListItem.listItem
-        (ListItem.config
-            |> ListItem.setOnClick (ClickedStratifierEdit groupIdx stratifierIdx)
-        )
+        ListItem.config
         (String.fromInt stratifierIdx)
-        [ text title ]
+        [ text title
+        , ListItem.meta []
+            [ Button.icon
+                (Button.config
+                    |> Button.setOnClick (ClickedStratifierEdit groupIdx stratifierIdx)
+                )
+                "edit"
+            , Button.icon
+                (Button.config
+                    |> Button.setOnClick (ClickedStratifierMoveUp groupIdx stratifierIdx)
+                )
+                "arrow_upward"
+            , Button.icon
+                (Button.config
+                    |> Button.setOnClick (ClickedStratifierMoveDown groupIdx stratifierIdx)
+                )
+                "arrow_downward"
+            , Button.icon
+                (Button.config
+                    |> Button.setOnClick (ClickedStratifierDelete groupIdx stratifierIdx)
+                )
+                "delete"
+            ]
+        ]
 
 
 viewReportPanel reportPanel =

@@ -1,8 +1,11 @@
 'use strict';
 
+import 'material-design-icons/iconfont/material-icons.css';
+import 'typeface-roboto/index.css';
+import 'typeface-roboto-mono/index.css';
 require("./styles.scss");
 
-const {Elm} = require('./Main');
+const {Elm} = require('./Main.elm');
 var app = Elm.Main.init({flags: {session: localStorage.session || null}});
 
 app.ports.storeSession.subscribe(function (session) {

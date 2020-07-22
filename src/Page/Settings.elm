@@ -19,6 +19,7 @@ import List.Zipper as Zipper exposing (Zipper)
 import NaturalOrdering
 import Page.Settings.ServerDialog as ServerDialog
 import Ports
+import Route exposing (Route)
 import Session exposing (Server, Session)
 
 
@@ -67,7 +68,7 @@ type Msg
     | GotServerDialogMsg ServerDialog.Msg
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
+update : Msg -> Model -> ( Model, Cmd Msg, Maybe Route )
 update msg model =
     case msg of
         ClickedAddServer ->
@@ -77,6 +78,7 @@ update msg model =
                 , onServerSave = Just ClickedServerSaveAtAdd
               }
             , Cmd.none
+            , Nothing
             )
 
         ClickedServerSaveAtAdd server ->
@@ -93,6 +95,7 @@ update msg model =
                 , onServerSave = Nothing
               }
             , storeSession session
+            , Nothing
             )
 
         ClickedServerSaveAtEdit oldServer newServer ->
@@ -106,6 +109,7 @@ update msg model =
                 , onServerSave = Nothing
               }
             , storeSession session
+            , Nothing
             )
 
         ClickedServer name ->
@@ -115,6 +119,7 @@ update msg model =
             in
             ( { model | session = session }
             , storeSession session
+            , Nothing
             )
 
         ClickedServerEdit server ->
@@ -124,6 +129,7 @@ update msg model =
                 , onServerSave = Just (ClickedServerSaveAtEdit server)
               }
             , Cmd.none
+            , Nothing
             )
 
         ClickedServerDelete name ->
@@ -133,6 +139,7 @@ update msg model =
             in
             ( { model | session = session }
             , storeSession session
+            , Nothing
             )
 
         GotServerDialogMsg msg_ ->
@@ -140,6 +147,7 @@ update msg model =
                 | serverDialog = ServerDialog.update msg_ model.serverDialog
               }
             , Cmd.none
+            , Nothing
             )
 
 

@@ -22,7 +22,7 @@ import Loading exposing (Status(..))
 import Maybe.Extra as MaybeExtra
 import Page.Library.CqlPanel as CqlPanel
 import Page.Library.Sidebar as Sidebar
-import Route
+import Route exposing (Route)
 import Session exposing (Server, Session)
 
 
@@ -84,7 +84,7 @@ type Msg
     | GotCqlPanelMsg CqlPanel.Msg
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
+update : Msg -> Model -> ( Model, Cmd Msg, Maybe Route )
 update msg model =
     case msg of
         ClickedHeaderSave title description ->
@@ -98,11 +98,13 @@ update msg model =
                         |> saveLibrary (Session.getBase model.session) model.libraryId
                 )
                 model
+            , Nothing
             )
 
         ClickedHeaderDelete ->
             ( model
             , deleteLibrary (Session.getBase model.session) model.libraryId
+            , Nothing
             )
 
         ClickedCqlPanelSave attachment ->
@@ -115,11 +117,13 @@ update msg model =
                         |> saveLibrary (Session.getBase model.session) model.libraryId
                 )
                 model
+            , Nothing
             )
 
         ClickedSidebarSave library ->
             ( model
             , saveLibrary (Session.getBase model.session) model.libraryId library
+            , Nothing
             )
 
         ClickedSidebarCopyToServer server ->
@@ -130,48 +134,54 @@ update msg model =
 
                 _ ->
                     Cmd.none
+            , Nothing
             )
 
         CompletedLoadLibrary (Ok library) ->
             ( { model | data = loaded (Session.getBase model.session) library }
             , Cmd.none
+            , Nothing
             )
 
         CompletedLoadLibrary (Err error) ->
             ( { model | data = Failed error }
             , Cmd.none
+            , Nothing
             )
 
         CompletedSaveLibrary (Ok library) ->
             ( { model | data = loaded (Session.getBase model.session) library }
             , Cmd.none
+            , Nothing
             )
 
         CompletedSaveLibrary (Err _) ->
-            ( model, Cmd.none )
+            ( model, Cmd.none, Nothing )
 
         CompletedDuplicateLibrary (Ok library) ->
             ( { model | data = loaded (Session.getBase model.session) library }
             , Cmd.none
+            , Nothing
             )
 
         CompletedDuplicateLibrary (Err _) ->
-            ( model, Cmd.none )
+            ( model, Cmd.none, Nothing )
 
         CompletedDeleteLibrary (Ok _) ->
             ( model
-            , Route.pushUrl (Session.toNavKey model.session) Route.LibraryList
+            , Cmd.none
+            , Just Route.LibraryList
             )
 
         CompletedDeleteLibrary (Err _) ->
-            ( model, Cmd.none )
+            ( model, Cmd.none, Nothing )
 
         GotHeaderMsg msg_ ->
             let
                 updateHeader f =
                     updateData (\data -> { data | header = f data.header })
             in
-            ( updateHeader (Header.update msg_) model, Cmd.none )
+            ( updateHeader (Header.update msg_) model, Cmd.none, Nothing )
 
         GotSidebarMsg msg_ ->
             updateDataWithCmd
@@ -191,7 +201,7 @@ update msg model =
                 updateCqlPanel f =
                     updateData (\data -> { data | cqlPanel = f data.cqlPanel })
             in
-            ( updateCqlPanel (CqlPanel.update msg_) model, Cmd.none )
+            ( updateCqlPanel (CqlPanel.update msg_) model, Cmd.none, Nothing )
 
 
 doWithData f model =
@@ -219,10 +229,10 @@ updateDataWithCmd f model =
                 ( data_, cmd ) =
                     f data
             in
-            ( { model | data = Loaded data_ }, cmd )
+            ( { model | data = Loaded data_ }, cmd, Nothing )
 
         _ ->
-            ( model, Cmd.none )
+            ( model, Cmd.none, Nothing )
 
 
 loaded base library =
