@@ -349,7 +349,7 @@ createMeasure base =
             , name = Nothing
             , title = Nothing
             , subtitle = Nothing
-            , status = PublicationStatus.Unknown
+            , status = PublicationStatus.Draft
             , subject =
                 Just
                     { coding =
