@@ -18,6 +18,7 @@ import Fhir.ValueSet.PublicationStatus as PublicationStatus exposing (Publicatio
 import Json.Decode exposing (Decoder, list, maybe, string, succeed)
 import Json.Decode.Pipeline exposing (optional, required)
 import Json.Encode as Encode exposing (Value)
+import Util
 
 
 type alias Library =
@@ -86,7 +87,7 @@ encode : Library -> Value
 encode library =
     object
         [ pair "resourceType" Encode.string "Library"
-        , pair "id" Encode.string library.id
+        , optionalPair "id" Encode.string <| Util.emptyToNothing library.id
         , optionalPair "meta" Meta.encode library.meta
         , optionalPair "url" Encode.string library.url
         , optionalPair "version" Encode.string library.version

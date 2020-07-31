@@ -1,4 +1,4 @@
-module Util exposing (TimeCtx, applyIf, liftMaybe)
+module Util exposing (TimeCtx, applyIf, emptyToNothing, liftMaybe)
 
 import Time
 
@@ -27,3 +27,12 @@ liftMaybe setter =
 
             Nothing ->
                 config
+
+
+emptyToNothing : String -> Maybe String
+emptyToNothing s =
+    if String.isEmpty s then
+        Nothing
+
+    else
+        Just s

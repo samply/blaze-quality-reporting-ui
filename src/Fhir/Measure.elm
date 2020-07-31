@@ -23,6 +23,7 @@ import Fhir.ValueSet.PublicationStatus as PublicationStatus exposing (Publicatio
 import Json.Decode exposing (Decoder, list, maybe, string, succeed)
 import Json.Decode.Pipeline exposing (optional, required)
 import Json.Encode as Encode exposing (Value)
+import Util
 
 
 type alias Measure =
@@ -129,7 +130,7 @@ encode : Measure -> Value
 encode measure =
     object
         [ pair "resourceType" Encode.string "Measure"
-        , pair "id" Encode.string measure.id
+        , optionalPair "id" Encode.string <| Util.emptyToNothing measure.id
         , optionalPair "meta" Meta.encode measure.meta
         , optionalPair "url" Encode.string measure.url
         , optionalPair "version" Encode.string measure.version
