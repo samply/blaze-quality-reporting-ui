@@ -35,13 +35,10 @@ default =
     { timeZone = Time.utc
     , servers =
         Zipper.fromCons
-            { name = "Blaze LIFE"
-            , url = "https://blaze.life.uni-leipzig.de/fhir"
+            { name = "Localhost 8080"
+            , url = "http://localhost:8080/fhir"
             }
-            [ { name = "Localhost"
-              , url = "http://localhost:8080/fhir"
-              }
-            ]
+            []
     }
 
 
