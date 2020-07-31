@@ -157,13 +157,14 @@ view { onMsg, onSelect } model =
             |> Dialog.setOnClose (onMsg ClickedClose)
             |> Dialog.setAttributes [ class "measure-assoc-library-dialog" ]
         )
-        { title = Just "Load Library"
+        { title = Just "Reference Library"
         , content =
             [ TextField.outlined
                 (TextField.config
                     |> TextField.setPlaceholder (Just "Search")
                     |> TextField.setValue search
                     |> TextField.setOnInput (EnteredSearch >> onMsg)
+                    |> TextField.setAttributes [ class "mb-2" ]
                 )
             , libraryList onSelect libraries
             ]
