@@ -62,7 +62,7 @@ type alias Content msg =
 dialog : Config msg -> Content msg -> Html msg
 dialog ({ additionalAttributes } as config_) content =
     Html.div
-        ([ class "fixed inset-0"
+        ([ class "fixed inset-0 h-screen"
          , class "z-50 bg-black bg-opacity-32"
          ]
             ++ List.filterMap identity
@@ -85,9 +85,11 @@ openClass { open } =
 
 viewDialog : List (Html.Attribute msg) -> Content msg -> Html msg
 viewDialog additionalAttributes { title, content, actions } =
-    Html.div [ class "flex items-center justify-around h-full" ]
+    Html.div []
         [ Html.div
-            ([ class "bg-white rounded-md p-6 shadow-2xl w-1/3"
+            ([ class "fixed top-1/4 left-1/4"
+             , class "w-1/2 max-h-1/2"
+             , class "bg-white rounded-md p-6 shadow-2xl"
              ]
                 ++ additionalAttributes
             )

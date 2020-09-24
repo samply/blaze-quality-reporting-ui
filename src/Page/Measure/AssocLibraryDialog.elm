@@ -155,7 +155,6 @@ view { onMsg, onSelect } model =
         (Dialog.config
             |> Dialog.setOpen open
             |> Dialog.setOnClose (onMsg ClickedClose)
-            |> Dialog.setAttributes [ class "measure-assoc-library-dialog" ]
         )
         { title = Just "Reference Library"
         , content =
@@ -177,8 +176,10 @@ libraryList onSelect libraries =
         text "no libraries available"
 
     else
-        List.list List.config <|
-            List.map (libraryListItem onSelect) libraries
+        Html.div [ class "h-64 overflow-y-auto" ]
+            [ List.list List.config <|
+                List.map (libraryListItem onSelect) libraries
+            ]
 
 
 libraryListItem onSelect library =
