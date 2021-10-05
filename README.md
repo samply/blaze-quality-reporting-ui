@@ -6,7 +6,7 @@ The Blaze Quality Reporting UI is a desktop app. Please download an installer fo
 
 ## Development
 
-First run:
+You need node v14. First run:
 
 ```sh
 npm install
