@@ -6,9 +6,15 @@ The Blaze Quality Reporting UI is a desktop app. Please download an installer fo
 
 ## Development
 
+First run:
+
+```sh
+npm install
+```
+
 The Blaze Quality Reporting UI is an [Electron][1] app and will start in development mode after running:
 
-```bash
+```sh
 npm run start
 ```
 
@@ -16,13 +22,13 @@ npm run start
 
 A production build will create various artifacts for macOS, Linux and Windows in the `out` dir.
 
-```bash
+```sh
 npm run make
 ```
 
 ## License
 
-Copyright 2019 The Samply Development Community
+Copyright 2019 - 2021 The Samply Community
 
 Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at
 
