@@ -88,7 +88,7 @@
         "file-loader": "^6.0.0",
         "html-webpack-plugin": "^4.2.0",
         "node-loader": "^0.6.0",
-        "node-sass": "^4.14.1",
+        "node-sass": "^7.0.0",
         "postcss-loader": "^3.0.0",
         "purgecss": "^2.3.0",
         "resolve-url-loader": "^3.1.1",
