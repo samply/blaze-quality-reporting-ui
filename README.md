@@ -1,3 +1,5 @@
+**This project isn't used/supported anymore. It was archived at Dec 12 2024.**
+
 # Blaze Quality Reporting UI
 
 ## Usage
